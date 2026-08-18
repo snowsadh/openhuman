@@ -1,0 +1,60 @@
+services:
+  # ──────────────────────────────────────────────────────────
+  # PostgreSQL (maps to port 5433 to avoid local pg conflicts)
+  # ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: openhuman
+      POSTGRES_PASSWORD: openhuman
+      POSTGRES_DB: openhuman
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openhuman"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────
+  # FastAPI backend
+  # ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    env_file: ./apps/api/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://openhuman:openhuman@postgres:5432/openhuman
+      GATEWAY_ENABLED: "false"
+      FRONTEND_URL: "http://localhost:3000"
+      MCP_OAUTH_REDIRECT_URI: "http://localhost:8000/api/mcp/oauth/callback"
+      CORS_ORIGINS: >-
+        ["http://localhost:3000","http://127.0.0.1:3000","http://localhost:8000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────
+  # Next.js frontend
+  # ──────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:

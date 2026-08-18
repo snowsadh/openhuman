@@ -1,0 +1,2 @@
+# Ignore pyproject.toml on Vercel to force fallback to requirements.txt
+pyproject.toml
