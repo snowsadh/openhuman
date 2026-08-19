@@ -1,0 +1,60 @@
+{
+  "display_information": {
+    "name": "OpenHuman",
+    "description": "AI employees in Slack with personas, tools, and channel routing",
+    "background_color": "#1a1a2e"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Junior",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://api-production-5f57.up.railway.app/api/slack/oauth/callback"
+    ],
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "canvas:read",
+        "canvas:write",
+        "channels:history",
+        "channels:join",
+        "channels:manage",
+        "channels:read",
+        "chat:write",
+        "chat:write.customize",
+        "files:read",
+        "files:write",
+        "groups:history",
+        "groups:manage",
+        "groups:read",
+        "im:history",
+        "im:manage",
+        "im:read",
+        "im:write",
+        "mpim:history",
+        "mpim:manage",
+        "mpim:read",
+        "mpim:write",
+        "reactions:write",
+        "users:read",
+        "users:read.email"
+      ]
+    }
+  },
+  "settings": {
+    "socket_mode_enabled": true,
+    "event_subscriptions": {
+      "bot_events": [
+        "app_mention",
+        "message.im",
+        "message.groups",
+        "message.mpim",
+        "message.channels"
+      ]
+    },
+    "org_deploy_enabled": false
+  }
+}
