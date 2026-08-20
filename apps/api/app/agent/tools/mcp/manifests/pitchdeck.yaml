@@ -1,0 +1,17 @@
+manifest_version: 1
+name: pitchdeck
+description: Generate styled .pptx pitch decks locally — free, no API key, no signup required
+source: ""
+
+transport:
+  type: stdio
+  command: python
+  args:
+    - ${MANIFEST_DIR}/../pitchdeck_server.py
+
+auth:
+  type: none
+
+tools:
+  default_allow: null
+  default_deny: []

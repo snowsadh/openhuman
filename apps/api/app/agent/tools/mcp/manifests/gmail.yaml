@@ -1,0 +1,25 @@
+manifest_version: 1
+name: gmail
+description: Gmail MCP — search threads, read messages, create drafts, and manage labels
+source: https://developers.google.com/workspace/gmail/api/guides/configure-mcp-server
+
+transport:
+  type: streamable_http
+  url: https://gmailmcp.googleapis.com/mcp/v1
+
+auth:
+  type: oauth2
+  authorize_url: https://accounts.google.com/o/oauth2/v2/auth
+  token_url: https://oauth2.googleapis.com/token
+  scopes:
+    - https://www.googleapis.com/auth/gmail.readonly
+    - https://www.googleapis.com/auth/gmail.compose
+  token_auth_method: form
+  supports_refresh: true
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0

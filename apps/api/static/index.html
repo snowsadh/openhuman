@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP Agent Chat</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f0f; color: #e4e4e7; height: 100vh; display: flex; flex-direction: column; }
+  .hidden { display: none !important; }
+
+  /* Auth screen */
+  #auth-screen { display: flex; align-items: center; justify-content: center; height: 100vh; }
+  .auth-card { background: #1a1a1e; border: 1px solid #27272a; border-radius: 12px; padding: 32px; width: 400px; }
+  .auth-card h1 { font-size: 20px; margin-bottom: 4px; }
+  .auth-card p { font-size: 13px; color: #a1a1aa; margin-bottom: 20px; }
+  .auth-card label { display: block; font-size: 12px; font-weight: 600; margin: 12px 0 4px; color: #a1a1aa; text-transform: uppercase; letter-spacing: .05em; }
+  .auth-card input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #27272a; background: #09090b; color: #e4e4e7; font-size: 14px; outline: none; }
+  .auth-card input:focus { border-color: #6366f1; }
+  .auth-card .note { margin-top: 12px; font-size: 11px; color: #71717a; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; background: #6366f1; color: #fff; margin-top: 16px; transition: .15s; }
+  .btn:hover { background: #4f46e5; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; margin-top: 0; }
+  .btn-outline { background: transparent; border: 1px solid #27272a; color: #e4e4e7; }
+  .btn-outline:hover { background: #27272a; }
+  .btn-danger { background: #dc2626; }
+  .btn-danger:hover { background: #b91c1c; }
+  .error { color: #ef4444; font-size: 13px; margin-top: 8px; }
+
+  /* Chat layout */
+  #chat-screen { display: flex; height: 100vh; }
+  #sidebar { width: 280px; background: #18181b; border-right: 1px solid #27272a; display: flex; flex-direction: column; flex-shrink: 0; }
+  #sidebar-header { padding: 16px; border-bottom: 1px solid #27272a; }
+  #sidebar-header h2 { font-size: 14px; font-weight: 700; }
+  #sidebar-header .sub { font-size: 11px; color: #71717a; margin-top: 2px; }
+  .sidebar-section { padding: 12px 16px; border-bottom: 1px solid #27272a; }
+  .sidebar-section h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #71717a; margin-bottom: 8px; }
+  .sidebar-section select, .sidebar-section input { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #27272a; background: #09090b; color: #e4e4e7; font-size: 13px; outline: none; }
+  .sidebar-section select:focus, .sidebar-section input:focus { border-color: #6366f1; }
+  .sidebar-section label { display: block; font-size: 11px; color: #a1a1aa; margin: 8px 0 4px; }
+  .meta-row { font-size: 12px; color: #71717a; margin-top: 8px; display: flex; justify-content: space-between; }
+  .sidebar-footer { margin-top: auto; padding: 12px 16px; border-top: 1px solid #27272a; font-size: 11px; color: #52525b; }
+
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #chat-header { padding: 14px 20px; border-bottom: 1px solid #27272a; background: #18181b; display: flex; align-items: center; justify-content: space-between; }
+  #chat-header h1 { font-size: 15px; font-weight: 700; }
+  #chat-header .hint { font-size: 11px; color: #71717a; }
+
+  #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .msg { max-width: 75%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { align-self: flex-end; background: #6366f1; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.assistant { align-self: flex-start; background: #27272a; border-bottom-left-radius: 4px; }
+  .msg .meta { font-size: 10px; opacity: .6; margin-top: 6px; }
+
+  #input-area { padding: 16px 20px; border-top: 1px solid #27272a; background: #18181b; display: flex; gap: 8px; }
+  #input-area textarea { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #27272a; background: #09090b; color: #e4e4e7; font-size: 14px; outline: none; resize: none; min-height: 42px; max-height: 120px; font-family: inherit; }
+  #input-area textarea:focus { border-color: #6366f1; }
+  #input-area .btn { margin-top: 0; }
+
+  /* Info banner */
+  #info-banner { margin: 0 20px; padding: 10px 14px; background: #1a1a2e; border: 1px solid #312e81; border-radius: 8px; font-size: 12px; color: #a5b4fc; }
+
+  /* Files */
+  .file-attachment { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #1a1a2e; border: 1px solid #312e81; border-radius: 6px; font-size: 12px; margin: 4px 4px 0 0; color: #a5b4fc; text-decoration: none; }
+  .file-attachment:hover { background: #312e81; }
+
+  /* Loading */
+  .loading-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+  @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+
+  /* Status dot */
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-dot.online { background: #22c55e; }
+  .status-dot.offline { background: #71717a; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ AUTH SCREEN ════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h1>MCP Agent Chat</h1>
+    <p>Login to test your MCP-connected agents</p>
+    <label>API URL</label>
+    <input id="api-url" value="http://localhost:8000">
+    <label>Email</label>
+    <input id="auth-email" type="email" placeholder="you@example.com">
+    <label>Password</label>
+    <input id="auth-password" type="password" placeholder="password">
+    <div id="auth-error" class="error hidden"></div>
+    <button class="btn" id="auth-btn" onclick="login()">Login</button>
+    <div class="note">First-time users are auto-registered. Token is stored in localStorage.</div>
+  </div>
+</div>
+
+<!-- ════════════════════ CHAT SCREEN ════════════════════ -->
+<div id="chat-screen" class="hidden">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h2>MCP Agent Chat</h2>
+      <div class="sub"><span id="user-email-display"></span></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Organization</h3>
+      <select id="org-select" onchange="onOrgChange()"><option>Loading…</option></select>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Employee (Agent)</h3>
+      <select id="emp-select"><option>Select org first</option></select>
+      <div class="meta-row">
+        <span id="emp-role"></span>
+        <span id="emp-type"></span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Platform</h3>
+      <input id="platform-input" value="api" placeholder="api / slack / discord">
+      <label>Channel ID</label>
+      <input id="channel-input" value="dev-chat" placeholder="channel/thread id">
+      <label>User ID</label>
+      <input id="user-input" value="developer" placeholder="your user id">
+    </div>
+
+    <div class="sidebar-section" style="flex:1;overflow-y:auto;">
+      <h3>MCP Catalog <span id="mcp-count" style="float:right;font-size:11px;color:#71717a;"></span></h3>
+      <div id="mcp-catalog-list" style="font-size:12px;"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      MCP-connected agents — ask questions that use your connected tools.<br>
+      <a href="#" onclick="logout()" style="color:#6366f1;text-decoration:none;">Logout</a>
+    </div>
+  </div>
+
+  <!-- Main chat area -->
+  <div id="main">
+    <div id="chat-header">
+      <div>
+        <h1 id="chat-title">Select an employee to start chatting</h1>
+        <div class="hint" id="chat-subtitle"></div>
+      </div>
+      <div></div>
+    </div>
+
+    <div id="info-banner" class="hidden"></div>
+
+    <div id="messages">
+      <div class="msg assistant" style="align-self:center;background:transparent;border:1px solid #27272a;font-size:13px;text-align:center;color:#71717a;max-width:400px;">
+        Select an employee/agent from the sidebar and type your message below. MCP-connected tools will be available automatically.
+      </div>
+    </div>
+
+    <div id="input-area">
+      <textarea id="msg-input" placeholder="Type a message…" rows="1" onkeydown="onInputKeydown(event)"></textarea>
+      <button class="btn" id="send-btn" onclick="sendMessage()" disabled>Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════
+
+let API = '';
+let token = '';
+let orgs = [];
+let emps = [];
+let connectors = [];
+let catalog = [];
+let isSending = false;
+
+// ═══════════════════════════════════════════════════════════════
+// Auth
+// ═══════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('mcp_chat_api');
+  const savedToken = localStorage.getItem('mcp_chat_token');
+  if (saved) document.getElementById('api-url').value = saved;
+  if (savedToken) {
+    API = saved || 'http://localhost:8000';
+    token = savedToken;
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('chat-screen').classList.remove('hidden');
+    loadInitialData();
+  }
+});
+
+async function login() {
+  API = document.getElementById('api-url').value.replace(/\/+$/, '');
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-btn');
+  errEl.classList.add('hidden');
+
+  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.classList.remove('hidden'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Authenticating…';
+
+  try {
+    let resp = await fetch(`${API}/api/auth/login`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    if (resp.status === 401) {
+      // Try register
+      resp = await fetch(`${API}/api/auth/register`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({email, password, name: email.split('@')[0]})
+      });
+    }
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.detail || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    token = data.access_token;
+    localStorage.setItem('mcp_chat_api', API);
+    localStorage.setItem('mcp_chat_token', token);
+
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('chat-screen').classList.remove('hidden');
+    loadInitialData();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Login';
+  }
+}
+
+function logout() {
+  token = '';
+  localStorage.removeItem('mcp_chat_token');
+  document.getElementById('chat-screen').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Data loading
+// ═══════════════════════════════════════════════════════════════
+
+async function apiGet(path) {
+  const resp = await fetch(`${API}${path}`, {headers: {'Authorization':`Bearer ${token}`,'Accept':'application/json'}});
+  if (!resp.ok) { const d = await resp.json().catch(()=>({})); throw new Error(d.detail||`GET ${path} ${resp.status}`); }
+  return resp.json();
+}
+
+async function loadInitialData() {
+  try {
+    // User info
+    const me = await apiGet('/api/auth/me');
+    document.getElementById('user-email-display').textContent = me.email || me.name || 'User';
+
+    // Orgs
+    orgs = await apiGet('/api/organizations');
+    const sel = document.getElementById('org-select');
+    sel.innerHTML = orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+    if (orgs.length) onOrgChange();
+  } catch (e) {
+    showInfo('Failed to load data: ' + e.message, 'error');
+  }
+}
+
+async function onOrgChange() {
+  const orgId = document.getElementById('org-select').value;
+  if (!orgId) return;
+  try {
+    // Employees
+    emps = await apiGet(`/api/organizations/${orgId}/employees`);
+    const sel = document.getElementById('emp-select');
+    sel.innerHTML = emps.map(e => `<option value="${e.id}">${e.name} (${e.employee_type})</option>`).join('') || '<option value="">No employees</option>';
+
+    // Connectors + Catalog
+    connectors = await apiGet(`/api/organizations/${orgId}/mcp-connectors`);
+    const catResp = await apiGet(`/api/organizations/${orgId}/mcp-catalog`);
+    catalog = catResp.entries || [];
+
+    renderCatalog();
+
+    if (emps.length) onEmpChange();
+  } catch (e) {
+    showInfo('Failed to load org data: ' + e.message, 'error');
+  }
+}
+
+function renderCatalog() {
+  const connected = connectors.filter(c => c.is_connected);
+  document.getElementById('mcp-count').textContent = `${connected.length}/${connectors.length} connected`;
+
+  const list = document.getElementById('mcp-catalog-list');
+  const connMap = {};
+  for (const c of connectors) connMap[c.slug] = c;
+
+  // Show connected tools first, then unconnected
+  const sorted = [...connectors].sort((a, b) => (b.is_connected ? 1 : 0) - (a.is_connected ? 1 : 0));
+  list.innerHTML = sorted.map(c => {
+    const inCat = catalog.find(e => e.slug === c.slug);
+    const name = c.name || inCat?.name || c.slug;
+    const cat = inCat?.category || '';
+    const badge = c.is_connected ? '<span style="color:#22c55e;font-size:10px;">● CONNECTED</span>' : `<button class="btn btn-sm" onclick="installMCP('${c.slug}')" style="font-size:10px;padding:2px 8px;">+ Connect</button>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #27272a10;">
+      <div><div style="font-size:12px;">${escHtml(name)}</div><div style="font-size:10px;color:#71717a;">${escHtml(cat)}</div></div>
+      <div>${badge}</div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) { return (s || '').replace(/[&<>"]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+
+function specDefaultAuthUrl(slug) {
+  const known = {
+    'figma': 'https://www.figma.com/oauth',
+    'jira': 'https://auth.atlassian.com/authorize',
+    'linear': 'https://linear.app/oauth/authorize',
+    'trello': 'https://trello.com/1/authorize',
+    'clickup': 'https://app.clickup.com/api',
+    'airtable': 'https://airtable.com/oauth2/v1/authorize',
+    'firebase': 'https://accounts.google.com/o/oauth2/v2/auth',
+    'hubspot': 'https://app.hubspot.com/oauth/authorize',
+    'salesforce': 'https://login.salesforce.com/services/oauth2/authorize',
+    'zendesk': 'https://{subdomain}.zendesk.com/oauth/authorizations/new',
+    'shopify': 'https://{shop}.myshopify.com/admin/oauth/authorize',
+    'medium': 'https://medium.com/m/oauth/authorize',
+    'zoom': 'https://zoom.us/oauth/authorize',
+    'google-calendar': 'https://accounts.google.com/o/oauth2/v2/auth',
+    'discord': 'https://discord.com/api/oauth2/authorize',
+    'slack': 'https://slack.com/oauth/v2/authorize',
+  };
+  return known[slug] || `https://${slug}.com/oauth/authorize`;
+}
+function specDefaultTokenUrl(slug) {
+  const known = {
+    'figma': 'https://www.figma.com/api/oauth/token',
+    'jira': 'https://auth.atlassian.com/oauth/token',
+    'linear': 'https://api.linear.app/oauth/token',
+    'trello': 'https://trello.com/1/oauth/token',
+    'clickup': 'https://app.clickup.com/api/v2/oauth/token',
+    'airtable': 'https://airtable.com/oauth2/v1/token',
+    'firebase': 'https://oauth2.googleapis.com/token',
+    'hubspot': 'https://api.hubapi.com/oauth/v1/token',
+    'salesforce': 'https://login.salesforce.com/services/oauth2/token',
+    'zendesk': 'https://{subdomain}.zendesk.com/oauth/tokens',
+    'shopify': 'https://{shop}.myshopify.com/admin/oauth/access_token',
+    'medium': 'https://api.medium.com/v1/tokens',
+    'zoom': 'https://zoom.us/oauth/token',
+    'google-calendar': 'https://oauth2.googleapis.com/token',
+    'discord': 'https://discord.com/api/oauth2/token',
+    'slack': 'https://slack.com/api/oauth.v2.access',
+  };
+  return known[slug] || `https://${slug}.com/oauth/token`;
+}
+
+async function installMCP(slug) {
+  let cred, authType;
+  const empId = document.getElementById('emp-select').value;
+  if (!empId) { showInfo('Select an employee first', 'error'); return; }
+  const orgId = document.getElementById('org-select').value;
+  const conn = connectors.find(c => c.slug === slug);
+  if (!conn) return;
+
+  // Check if this is a catalog-only connector (no working OAuth provider configured)
+  const catEntry = catalog.find(e => e.slug === slug);
+
+  // Determine available auth methods
+  const pasteFriendly = ['none', 'api_key_header', 'pat_bearer'];
+  const hasOAuth = conn.auth_type === 'oauth2' || conn.auth_types?.includes('oauth2');
+  const hasPasteFriendly = conn.auth_types?.some(a => pasteFriendly.includes(a));
+
+  // For any OAuth-supporting connector, give the user a choice: paste a credential or do OAuth
+  if (hasOAuth) {
+    const useOAuth = confirm(`"${conn.name || slug}" can use OAuth.\n\nClick OK to open OAuth (browser redirect), Cancel to paste a credential (PAT / API key) instead.`);
+    if (!useOAuth) {
+      // User chose to paste — use any paste-friendly auth type or default to pat_bearer
+      const altAuth = conn.auth_types?.find(a => pasteFriendly.includes(a)) || 'pat_bearer';
+      cred = prompt(`Enter credential for ${conn.name || slug} (${altAuth}):`);
+      if (cred === null) return;
+      authType = altAuth;
+      // Fall through to the paste flow below
+    } else {
+      // User chose OAuth
+      if (catEntry && !catEntry.is_hardcoded) {
+        const authUrl = prompt(`Enter OAuth authorize URL for "${conn.name || slug}":`, specDefaultAuthUrl(slug));
+        if (!authUrl) return;
+        const tokUrl = prompt(`Enter OAuth token URL:`, specDefaultTokenUrl(slug));
+        if (!tokUrl) return;
+        const cid = prompt(`Enter OAuth Client ID:`);
+        if (!cid) return;
+        const cs = prompt(`Enter OAuth Client Secret:`);
+        if (!cs) return;
+        window.location.href = `${API}/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install?token=${encodeURIComponent(token)}&redirect_to=${encodeURIComponent(window.location.href)}&client_id=${encodeURIComponent(cid)}&client_secret=${encodeURIComponent(cs)}&authorize_url=${encodeURIComponent(authUrl)}&token_url=${encodeURIComponent(tokUrl)}`;
+        return;
+      }
+      window.location.href = `${API}/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install?token=${encodeURIComponent(token)}&redirect_to=${encodeURIComponent(window.location.href)}`;
+      return;
+    }
+  }
+
+  // Paste-friendly flow (none / pat_bearer / api_key_header)
+  if (!cred) {
+    if (conn.auth_type === 'none') {
+      authType = 'none';
+      cred = '';
+    } else if (pasteFriendly.includes(conn.auth_type)) {
+      authType = conn.auth_type;
+      cred = prompt(`Enter credential for ${conn.name || slug} (${conn.auth_type}):`);
+      if (cred === null) return;
+    } else {
+      showInfo(`No auth method available for "${conn.name || slug}".`, 'error');
+      return;
+    }
+  }
+  try {
+    const resp = await fetch(`${API}/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}`, {
+      method: 'POST',
+      headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({credential: cred, auth_type: authType})
+    });
+    if (!resp.ok) { const d = await resp.json(); throw new Error(d.detail || `HTTP ${resp.status}`); }
+    showInfo(`✅ ${conn.name || slug} connected!`, '');
+    onOrgChange();
+  } catch (e) {
+    showInfo(`Failed: ${e.message}`, 'error');
+  }
+}
+
+function onEmpChange() {
+  const empId = document.getElementById('emp-select').value;
+  const emp = emps.find(e => e.id === empId);
+  document.getElementById('emp-role').textContent = emp ? (emp.role || '—') : '';
+  document.getElementById('emp-type').textContent = emp ? (emp.employee_type || '') : '';
+  document.getElementById('chat-title').textContent = emp ? `Chat with ${emp.name}` : 'Select an employee';
+  document.getElementById('send-btn').disabled = !empId;
+  document.getElementById('msg-input').disabled = !empId;
+
+  // Show installed MCP tools for this employee
+  const connectedMCP = connectors.filter(c => c.is_connected);
+  const banner = document.getElementById('info-banner');
+  if (connectedMCP.length) {
+    banner.textContent = `🧩 MCP tools available: ${connectedMCP.map(c => c.name || c.slug).join(', ')}`;
+    banner.classList.remove('hidden');
+  } else {
+    banner.textContent = '⚠️ No MCP servers connected. Use the sidebar to connect some.';
+    banner.classList.remove('hidden');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Chat
+// ═══════════════════════════════════════════════════════════════
+
+function onInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+async function sendMessage() {
+  if (isSending) return;
+  const input = document.getElementById('msg-input');
+  const content = input.value.trim();
+  if (!content) return;
+
+  const empId = document.getElementById('emp-select').value;
+  const orgId = document.getElementById('org-select').value;
+  const platform = document.getElementById('platform-input').value || 'api';
+  const channelId = document.getElementById('channel-input').value || 'dev-chat';
+  const userId = document.getElementById('user-input').value || 'developer';
+  const emp = emps.find(e => e.id === empId);
+  const org = orgs.find(o => o.id === orgId);
+
+  // Add user message
+  addMessage(content, 'user');
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add loading indicator
+  const loadingId = addMessage('Thinking…', 'assistant', true);
+
+  isSending = true;
+  document.getElementById('send-btn').disabled = true;
+
+  try {
+    const resp = await fetch(`${API}/api/agent/run`, {
+      method: 'POST',
+      headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({
+        content,
+        platform,
+        channel_id: channelId,
+        user_id: userId,
+        employee_id: empId,
+        employee_name: emp?.name || null,
+        org_name: org?.name || null,
+      })
+    });
+
+    if (loadingId && loadingId.parentNode) loadingId.parentNode.removeChild(loadingId);
+
+    if (!resp.ok) {
+      const d = await resp.json().catch(()=>({}));
+      addMessage(`Error: ${d.detail || `HTTP ${resp.status}`}`, 'assistant');
+      return;
+    }
+
+    const data = await resp.json();
+
+    if (data.error) {
+      addMessage(`Error: ${data.error}`, 'assistant');
+      return;
+    }
+
+    let responseText = data.response || '(no response)';
+    if (data.tool_calls_count > 0) {
+      responseText += `\n\n_used ${data.tool_calls_count} tool round(s)_`;
+    }
+    const msgEl = addMessage(responseText, 'assistant');
+
+    // File attachments
+    if (data.files && data.files.length) {
+      const fileContainer = document.createElement('div');
+      fileContainer.style.marginTop = '8px';
+      for (const f of data.files) {
+        const a = document.createElement('a');
+        a.href = `data:${f.content_type};base64,${f.data}`;
+        a.download = f.filename;
+        a.className = 'file-attachment';
+        a.textContent = `📎 ${f.title || f.filename}`;
+        a.target = '_blank';
+        fileContainer.appendChild(a);
+      }
+      msgEl.appendChild(fileContainer);
+    }
+
+  } catch (e) {
+    const loadingEl = document.getElementById(loadingId);
+    if (loadingEl) document.getElementById('messages').removeChild(loadingEl);
+    addMessage(`Network error: ${e.message}`, 'assistant');
+  } finally {
+    isSending = false;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('msg-input').focus();
+  }
+}
+
+function addMessage(text, role, isLoading = false) {
+  const el = document.createElement('div');
+  el.className = `msg ${role}`;
+  if (isLoading) {
+    el.id = 'loading-msg';
+    el.innerHTML = '<span class="loading-dots"></span>';
+  } else {
+    el.textContent = text;
+  }
+  const time = document.createElement('div');
+  time.className = 'meta';
+  time.textContent = new Date().toLocaleTimeString();
+  el.appendChild(time);
+  document.getElementById('messages').appendChild(el);
+  el.scrollIntoView({behavior: 'smooth', block: 'end'});
+  return el;
+}
+
+function showInfo(text, type) {
+  const banner = document.getElementById('info-banner');
+  banner.textContent = text;
+  banner.className = type === 'error' ? '' : '';
+  banner.classList.remove('hidden');
+  setTimeout(() => { if (banner.textContent === text) banner.classList.add('hidden'); }, 8000);
+}
+</script>
+</body>
+</html>

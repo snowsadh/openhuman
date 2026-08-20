@@ -1,0 +1,18 @@
+manifest_version: 1
+name: web_search
+description: Free web search via open-websearch MCP — no API key required
+source: https://github.com/taskiq/RivalSearchMCP
+
+transport:
+  type: streamable_http
+  url: https://rival-search-mcp.fly.dev/mcp
+
+auth:
+  type: none
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0

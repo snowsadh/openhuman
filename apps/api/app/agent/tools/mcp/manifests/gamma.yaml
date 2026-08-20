@@ -1,0 +1,24 @@
+manifest_version: 1
+name: gamma
+description: Gamma MCP — generate and manage presentations, documents, and web pages
+source: https://gamma.app/docs
+
+transport:
+  type: streamable_http
+  url: https://mcp.gamma.app/mcp
+
+auth:
+  type: oauth2
+  authorize_url: https://gamma.app/oauth/authorize
+  token_url: https://gamma.app/oauth/token
+  scopes:
+    - read
+    - write
+  supports_refresh: true
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0

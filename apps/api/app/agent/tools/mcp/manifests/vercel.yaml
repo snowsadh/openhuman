@@ -1,0 +1,24 @@
+manifest_version: 1
+name: vercel
+description: Vercel MCP — manage projects, deployments, domains, logs, and env vars
+source: https://vercel.com/docs/rest-api
+
+transport:
+  type: streamable_http
+  url: https://mcp.vercel.com
+
+auth:
+  type: oauth2
+  alternative_types:
+    - pat_bearer
+  authorize_url: https://vercel.com/oauth/authorize
+  token_url: https://api.vercel.com/v2/oauth/access_token
+  scopes: []
+  supports_refresh: false
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0

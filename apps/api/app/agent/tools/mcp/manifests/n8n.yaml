@@ -1,0 +1,19 @@
+manifest_version: 1
+name: n8n
+description: n8n MCP — search workflows, trigger runs, and build or edit workflows on your n8n instance
+source: https://docs.n8n.io/build/ways-of-building-workflows/connect-to-n8n-mcp-server/
+
+transport:
+  type: streamable_http
+
+auth:
+  type: pat_bearer
+  supports_refresh: false
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  requires_custom_server_url: true
+  request_timeout_seconds: 60.0

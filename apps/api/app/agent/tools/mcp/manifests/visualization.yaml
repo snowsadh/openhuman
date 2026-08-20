@@ -1,0 +1,17 @@
+manifest_version: 1
+name: visualization
+description: Create interactive charts locally — scatter plots, 3D graphs, histograms, heatmaps, line charts, and network diagrams
+source: https://github.com/xlisp/visualization-mcp-server
+
+transport:
+  type: stdio
+  command: python
+  args:
+    - ${MANIFEST_DIR}/../visualization_server.py
+
+auth:
+  type: none
+
+tools:
+  default_allow: null
+  default_deny: []
