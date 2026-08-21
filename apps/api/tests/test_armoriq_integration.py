@@ -1,0 +1,130 @@
+"""Focused proof that the shared MCP boundary cannot bypass ArmorIQ."""
+
+from __future__ import annotations
+
+import time
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from armoriq_sdk.exceptions import PolicyBlockedException, PolicyHoldException
+from armoriq_sdk.models import IntentToken
+from langchain_core.tools import StructuredTool
+
+from app.agent.tools.mcp.client import MCPClientManager, _get_circuit_breaker
+
+
+def _token() -> IntentToken:
+    now = time.time()
+    plan = {
+        "steps": [
+            {
+                "mcp": "identity-test",
+                "action": "assign_group",
+                "params": {"user": "sam", "group": "engineering"},
+            }
+        ]
+    }
+    return IntentToken(
+        token_id="test-token",
+        plan_hash="test-plan-hash",
+        signature="test-signature",
+        issued_at=now,
+        expires_at=now + 600,
+        composite_identity="test-identity",
+        raw_token={"plan": plan},
+        step_proofs=[[{"test": "proof"}]],
+        total_steps=1,
+    )
+
+
+def _tool(calls: list[dict]) -> StructuredTool:
+    async def original(user: str, group: str) -> str:
+        calls.append({"user": user, "group": group})
+        return "original MCP adapter ran"
+
+    return StructuredTool.from_function(
+        coroutine=original,
+        name="mcp__identity-test__assign_group",
+        description="Assign a user to an identity group",
+    )
+
+
+async def _run_inline(function, *args):  # type: ignore[no-untyped-def]
+    """Keep this unit test independent of asyncio's process-wide thread pool."""
+    return function(*args)
+
+
+@pytest.mark.asyncio
+async def test_allowed_call_executes_once_through_armoriq() -> None:
+    original_calls: list[dict] = []
+    tool = MCPClientManager()._wrap_tool(_tool(original_calls), "identity-test", None)
+    client = Mock()
+    client.invoke_with_policy.return_value = SimpleNamespace(result="ArmorIQ executed it")
+
+    with (
+        patch("app.agent.tools.mcp.client.get_armoriq_client", return_value=client),
+        patch(
+            "app.agent.tools.mcp.client.record_activity_from_context",
+            new=AsyncMock(),
+        ),
+        patch("app.agent.tools.mcp.client.asyncio.to_thread", side_effect=_run_inline),
+    ):
+        result = await tool.ainvoke(
+            {"user": "sam", "group": "engineering"},
+            config={
+                "configurable": {
+                    "armoriq_intent_token": _token().model_dump(mode="json"),
+                    "armoriq_user_email": "admin@example.com",
+                }
+            },
+        )
+
+    assert result == "ArmorIQ executed it"
+    assert client.invoke_with_policy.call_count == 1
+    assert original_calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "enforcement_error",
+    [
+        PolicyBlockedException(
+            "finance-admin is blocked",
+            enforcement_action="block",
+            reason="privileged_role",
+        ),
+        PolicyHoldException("finance-admin requires approval"),
+    ],
+)
+async def test_held_or_blocked_call_never_reaches_original_mcp(
+    enforcement_error: Exception,
+) -> None:
+    original_calls: list[dict] = []
+    tool = MCPClientManager()._wrap_tool(_tool(original_calls), "identity-test-block", None)
+    client = Mock()
+    client.invoke_with_policy.side_effect = enforcement_error
+    circuit = _get_circuit_breaker("identity-test-block")
+    failures_before = circuit.failure_count
+
+    with (
+        patch("app.agent.tools.mcp.client.get_armoriq_client", return_value=client),
+        patch(
+            "app.agent.tools.mcp.client.record_activity_from_context",
+            new=AsyncMock(),
+        ),
+        patch("app.agent.tools.mcp.client.asyncio.to_thread", side_effect=_run_inline),
+    ):
+        with pytest.raises(type(enforcement_error)):
+            await tool.ainvoke(
+                {"user": "sam", "group": "finance-admin"},
+                config={
+                    "configurable": {
+                        "armoriq_intent_token": _token().model_dump(mode="json"),
+                        "armoriq_user_email": "admin@example.com",
+                    }
+                },
+            )
+
+    assert original_calls == []
+    assert circuit.failure_count == failures_before
