@@ -6,6 +6,7 @@ from app.agent.checkpointer import get_checkpointer
 from app.agent.nodes import (
     CustomToolNode,
     build_prompt_node,
+    capture_plan_node,
     formatter_node,
     input_guardrail_node,
     llm_call_node,
@@ -32,7 +33,7 @@ def route_after_llm(state: AgentState) -> str:
     if isinstance(last_message, AIMessage) and last_message.tool_calls:
         # Check round limit to avoid infinite tool loops
         if state.get("tool_round", 0) < 5:
-            return "tools"
+            return "capture_plan"
 
     return "output_guardrail"
 
@@ -45,6 +46,7 @@ def build_graph(tools: list) -> CompiledStateGraph:
     workflow.add_node("input_guardrail", input_guardrail_node)
     workflow.add_node("build_prompt", build_prompt_node)
     workflow.add_node("llm_call", llm_call_node)
+    workflow.add_node("capture_plan", capture_plan_node)
     workflow.add_node("tools", CustomToolNode(tools))
     workflow.add_node("output_guardrail", output_guardrail_node)
     workflow.add_node("formatter", formatter_node)
@@ -69,10 +71,12 @@ def build_graph(tools: list) -> CompiledStateGraph:
         "llm_call",
         route_after_llm,
         {
-            "tools": "tools",
+            "capture_plan": "capture_plan",
             "output_guardrail": "output_guardrail",
         },
     )
+
+    workflow.add_edge("capture_plan", "tools")
 
     # Loop back from tools to llm_call
     workflow.add_edge("tools", "llm_call")
@@ -81,4 +85,3 @@ def build_graph(tools: list) -> CompiledStateGraph:
     workflow.add_edge("formatter", END)
 
     return workflow.compile(checkpointer=get_checkpointer())
-

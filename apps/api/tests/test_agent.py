@@ -256,7 +256,7 @@ class TestRouting:
             "tool_round": 2,
         }
         result = route_after_llm(state)  # type: ignore[arg-type]
-        assert result == "tools"
+        assert result == "capture_plan"
 
 
 class TestPromptToolHints:

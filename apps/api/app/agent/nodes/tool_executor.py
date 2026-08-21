@@ -14,8 +14,15 @@ class CustomToolNode(ToolNode):
         current_round = input.get("tool_round", 0)
         logger.info("[Tool Node] Executing tools round %d", current_round)
 
+        # Thread the signed per-round token into each MCP tool invocation.
+        tool_config = dict(config or {})
+        tool_config["configurable"] = {
+            **tool_config.get("configurable", {}),
+            "armoriq_intent_token": input.get("armoriq_intent_token"),
+        }
+
         # Execute tools using base implementation
-        result = await super().ainvoke(input, config, **kwargs)
+        result = await super().ainvoke(input, tool_config, **kwargs)
 
         # Log outputs
         if isinstance(result, dict):

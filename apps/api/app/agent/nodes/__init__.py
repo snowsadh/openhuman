@@ -1,4 +1,5 @@
 from app.agent.nodes.build_prompt import build_prompt_node
+from app.agent.nodes.capture_plan import capture_plan_node
 from app.agent.nodes.formatter import formatter_node
 from app.agent.nodes.input_guardrail import input_guardrail_node
 from app.agent.nodes.llm_call import llm_call_node
@@ -8,6 +9,7 @@ from app.agent.nodes.tool_executor import CustomToolNode
 __all__ = [
     "input_guardrail_node",
     "build_prompt_node",
+    "capture_plan_node",
     "llm_call_node",
     "CustomToolNode",
     "output_guardrail_node",

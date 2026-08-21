@@ -23,6 +23,9 @@ class AgentState(MessagesState):
     tools: list  # tool definitions available for this employee
     tool_round: int  # cycle counter (max 5)
 
+    # -- ArmorIQ enforcement -----------------------------------------------
+    armoriq_intent_token: dict | None  # signed token for the pending MCP step(s)
+
     # -- Outputs -----------------------------------------------------------
     raw_response: str | None  # LLM's final text before formatting
     response: str | None  # formatted / safe-fallback output
