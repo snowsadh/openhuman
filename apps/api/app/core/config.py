@@ -86,6 +86,11 @@ class Settings(BaseSettings):
     openai_base_url: str = ""  # empty = use OpenAI default; set for compatible APIs
     openai_model: str = "gpt-4o-mini"
 
+    # ArmorIQ — governs MCP execution; missing/unavailable service fails closed.
+    armoriq_api_key: str = ""
+    armoriq_request_timeout_seconds: int = 30
+    armoriq_approval_timeout_seconds: int = 300
+
     # Document storage
     upload_dir: str = "./uploads"
 

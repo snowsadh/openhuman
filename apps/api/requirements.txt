@@ -20,3 +20,4 @@ mcp>=1.0.0
 boto3>=1.35.0
 cognee[neo4j]>=1.2,<2.0
 python-dotenv>=1.0.0
+armoriq-sdk==0.6.9
