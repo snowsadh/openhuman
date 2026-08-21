@@ -120,6 +120,18 @@ class BaseSlackBot:
             logger.exception("Error closing %s Socket Mode connection", self._bot_label)
         logger.info("%s disconnected", self._bot_label)
 
+    async def _requester_email(self, event: dict) -> str | None:
+        """Resolve the Slack sender email when the app has users:read.email."""
+        user_id = event.get("user")
+        if not user_id:
+            return None
+        try:
+            response = await self.app.client.users_info(user=user_id)
+            return response.get("user", {}).get("profile", {}).get("email") or None
+        except SlackApiError:
+            logger.debug("Slack requester email is unavailable for user %s", user_id)
+            return None
+
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
@@ -759,6 +771,7 @@ class EmployeeSlackBot(BaseSlackBot):
             text,
             channel_id=channel,
             thread_ts=thread_ts,
+            user_email=await self._requester_email(event),
         )
 
         if result is None:
@@ -874,6 +887,7 @@ class EmployeeSlackBot(BaseSlackBot):
         content: str,
         channel_id: str = "",
         thread_ts: str = "",
+        user_email: str | None = None,
     ) -> dict | None:
         """Run the LangGraph agent as this employee."""
         root_ts = thread_ts or "direct"
@@ -901,6 +915,7 @@ class EmployeeSlackBot(BaseSlackBot):
                         "platform": "slack",
                         "channel_id": channel_id,
                         "thread_ts": thread_ts,
+                        "armoriq_user_email": user_email,
                     }
                 }
                 result = await graph.ainvoke(initial_state, config=config)
@@ -1016,6 +1031,7 @@ class WorkspaceSlackBot(BaseSlackBot):
             text,
             channel_id=channel,
             thread_ts=thread_ts,
+            user_email=await self._requester_email(event),
         )
         if result is None:
             return
@@ -1108,6 +1124,7 @@ class WorkspaceSlackBot(BaseSlackBot):
         content: str,
         channel_id: str = "",
         thread_ts: str = "",
+        user_email: str | None = None,
     ) -> dict | None:
         """Run the LangGraph agent as *employee_id*."""
         root_ts = thread_ts or "direct"
@@ -1135,6 +1152,7 @@ class WorkspaceSlackBot(BaseSlackBot):
                         "platform": "slack",
                         "channel_id": channel_id,
                         "thread_ts": thread_ts,
+                        "armoriq_user_email": user_email,
                     }
                 }
                 result = await graph.ainvoke(initial_state, config=config)

@@ -19,11 +19,21 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
+from armoriq_sdk.exceptions import (
+    ArmorIQException,
+    MCPInvocationException,
+    PolicyBlockedException,
+    PolicyHoldException,
+)
+from armoriq_sdk.models import IntentToken, InvokeOptions
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+from app.activity.service import record_activity_from_context
+from app.agent.armoriq import get_armoriq_client, parse_mcp_tool_name
 from app.agent.tools.mcp.connectors.registry import REGISTRY, ConnectorSpec
 from app.agent.tools.mcp.security import validate_connection
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -422,13 +432,13 @@ class MCPClientManager:
         slug: str,
         spec: ConnectorSpec | None,
     ) -> BaseTool:
-        """Wrap *tool* with observability and resilience guards.
+        """Wrap *tool* with ArmorIQ enforcement and resilience guards.
 
         Every invocation of the returned tool will:
 
         1. Check the circuit breaker — reject immediately if open.
         2. Check the rate limiter — reject if the per-minute cap is hit.
-        3. Enforce a per-call timeout via ``asyncio.wait_for``.
+        3. Require a signed plan token and execute through ArmorIQ ``invoke``.
         4. Log the outcome (``mcp_server``, ``mcp_tool``, ``latency_ms``,
            ``success``, ``error``).
         5. Report success/failure to the circuit breaker.
@@ -437,9 +447,8 @@ class MCPClientManager:
         max_rpm = spec.rate_limit_per_minute if spec else 60
         rl = _get_rate_limiter(slug, max_rpm)
         timeout = spec.request_timeout_seconds if spec else 30.0
-
-        # Capture the original coroutine method before we replace it.
-        original_ainvoke = tool.ainvoke
+        parsed_name = parse_mcp_tool_name(tool.name)
+        action = parsed_name[1] if parsed_name else tool.name
 
         async def guarded_ainvoke(input: Any, config: Any = None, **kwargs: Any) -> Any:
             # -- circuit breaker gate (per-invocation) -------------------
@@ -456,27 +465,141 @@ class MCPClientManager:
 
             rl.record_call()
 
-            # -- execute with timeout + structured logging ----------------
+            configurable = (config or {}).get("configurable", {})
+            token_data = configurable.get("armoriq_intent_token")
+            if not token_data:
+                exc = PolicyBlockedException(
+                    "MCP execution refused because no ArmorIQ intent token is present",
+                    enforcement_action="block",
+                    reason="missing_intent_token",
+                )
+                await record_activity_from_context(
+                    "armoriq_blocked",
+                    f"ArmorIQ blocked {slug}.{action}",
+                    status="blocked",
+                    metadata={"mcp": slug, "action": action, "reason": exc.reason},
+                )
+                raise exc
+
+            token = IntentToken.model_validate(token_data)
+            holds: list[dict[str, Any]] = []
+            event_loop = asyncio.get_running_loop()
+
+            def on_hold(info: Any) -> None:
+                holds.append(info.model_dump(mode="json"))
+                if len(holds) == 1:
+                    asyncio.run_coroutine_threadsafe(
+                        record_activity_from_context(
+                            "armoriq_held",
+                            f"ArmorIQ held {slug}.{action} for approval",
+                            status="pending",
+                            metadata={
+                                "mcp": slug,
+                                "action": action,
+                                "plan_hash": token.plan_hash,
+                            },
+                        ),
+                        event_loop,
+                    )
+
+            options = InvokeOptions(
+                wait_for_approval=True,
+                delegation_timeout_ms=settings.armoriq_approval_timeout_seconds * 1000,
+                user_email=configurable.get("armoriq_user_email"),
+                on_hold=on_hold,
+            )
+
+            # -- execute through ArmorIQ with timeout + structured logging -
             start = time.monotonic()
             try:
                 result = await asyncio.wait_for(
-                    original_ainvoke(input, config=config, **kwargs),
-                    timeout=timeout,
+                    asyncio.to_thread(
+                        lambda: get_armoriq_client().invoke_with_policy(
+                            slug,
+                            action,
+                            token,
+                            input,
+                            options,
+                        )
+                    ),
+                    timeout=max(
+                        timeout,
+                        settings.armoriq_approval_timeout_seconds
+                        + settings.armoriq_request_timeout_seconds,
+                    ),
                 )
                 elapsed_ms = (time.monotonic() - start) * 1000
                 log_mcp_call(slug, tool.name, elapsed_ms, success=True)
                 cb.record_success()
-                return result
-            except asyncio.TimeoutError:
+                await record_activity_from_context(
+                    "armoriq_allowed",
+                    f"ArmorIQ allowed {slug}.{action}",
+                    status="succeeded",
+                    metadata={
+                        "mcp": slug,
+                        "action": action,
+                        "plan_hash": token.plan_hash,
+                    },
+                )
+                return result.result
+            except (PolicyBlockedException, PolicyHoldException) as exc:
+                elapsed_ms = (time.monotonic() - start) * 1000
+                event_type = (
+                    "armoriq_held"
+                    if isinstance(exc, PolicyHoldException)
+                    else "armoriq_blocked"
+                )
+                status = "pending" if isinstance(exc, PolicyHoldException) else "blocked"
+                log_mcp_call(slug, tool.name, elapsed_ms, success=False, error=str(exc))
+                await record_activity_from_context(
+                    event_type,
+                    f"ArmorIQ {status} {slug}.{action}",
+                    status=status,
+                    metadata={
+                        "mcp": slug,
+                        "action": action,
+                        "reason": str(exc)[:300],
+                        "plan_hash": token.plan_hash,
+                    },
+                )
+                # Policy failures are not MCP availability failures and must not
+                # open the connector circuit breaker.
+                raise
+            except MCPInvocationException as exc:
+                elapsed_ms = (time.monotonic() - start) * 1000
+                log_mcp_call(slug, tool.name, elapsed_ms, success=False, error=str(exc))
+                cb.record_failure()
+                raise
+            except ArmorIQException as exc:
+                elapsed_ms = (time.monotonic() - start) * 1000
+                log_mcp_call(slug, tool.name, elapsed_ms, success=False, error=str(exc))
+                await record_activity_from_context(
+                    "armoriq_blocked",
+                    f"ArmorIQ blocked {slug}.{action}",
+                    status="blocked",
+                    metadata={
+                        "mcp": slug,
+                        "action": action,
+                        "reason": str(exc)[:300],
+                        "plan_hash": token.plan_hash,
+                    },
+                )
+                raise
+            except TimeoutError:
                 elapsed_ms = (time.monotonic() - start) * 1000
                 log_mcp_call(
                     slug,
                     tool.name,
                     elapsed_ms,
                     success=False,
-                    error=f"timeout after {timeout:.0f} s",
+                    error="ArmorIQ approval/invocation timeout",
                 )
-                cb.record_failure()
+                await record_activity_from_context(
+                    "armoriq_blocked",
+                    f"ArmorIQ timed out {slug}.{action}",
+                    status="blocked",
+                    metadata={"mcp": slug, "action": action},
+                )
                 raise
             except Exception as exc:
                 elapsed_ms = (time.monotonic() - start) * 1000
@@ -487,7 +610,9 @@ class MCPClientManager:
                     success=False,
                     error=str(exc),
                 )
-                cb.record_failure()
+                # The proxy reached the MCP and reported a tool failure only via
+                # MCPInvocationException. Other failures remain fail-closed but
+                # do not poison the connector circuit.
                 raise
 
         # Replace the ainvoke method with our guarded version.
