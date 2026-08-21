@@ -22,8 +22,11 @@ export function eventTypeToLevel(
       return "debug";
     // Warn level — needs attention
     case "human_escalation":
+    case "armoriq_held":
     case "org_deleted":
       return "warn";
+    case "armoriq_blocked":
+      return "error";
     // Info level — normal activity
     case "agent_run":
     case "agent_conversation":
@@ -33,6 +36,8 @@ export function eventTypeToLevel(
     case "org_created":
     case "org_updated":
     case "slack_oauth":
+    case "armoriq_plan":
+    case "armoriq_allowed":
       return "info";
     default:
       return "info";

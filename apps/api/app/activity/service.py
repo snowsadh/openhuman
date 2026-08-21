@@ -35,6 +35,10 @@ _ALLOWED_EVENT_TYPES = frozenset({
     "slack_oauth",
     "channel_assigned",
     "channel_unassigned",
+    "armoriq_plan",
+    "armoriq_allowed",
+    "armoriq_held",
+    "armoriq_blocked",
 })
 
 

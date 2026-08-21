@@ -73,10 +73,13 @@ function levelToEventTypes(level: string): string[] {
         "org_created",
         "org_updated",
         "slack_oauth",
+        "armoriq_plan",
+        "armoriq_allowed",
       ];
     case "warn":
-      return ["human_escalation", "org_deleted"];
+      return ["human_escalation", "armoriq_held", "org_deleted"];
     case "error":
+      return ["armoriq_blocked"];
     case "fatal":
       return []; // No event types map to error/fatal — returns all but won't crash
     default:
