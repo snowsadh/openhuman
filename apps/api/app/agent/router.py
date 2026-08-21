@@ -39,20 +39,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
 # ---------------------------------------------------------------------------
-# Graph cache — keyed by frozenset of tool names so identical tool sets
-# reuse a compiled graph across requests.
-# ---------------------------------------------------------------------------
-_graph_cache: dict[frozenset, CompiledStateGraph] = {}
-
-
-def _get_or_build_graph(tool_names: frozenset, tools: list) -> CompiledStateGraph:
-    """Return a compiled graph for *tools*, reusing a cached copy if possible."""
-    if tool_names not in _graph_cache:
-        _graph_cache[tool_names] = build_graph(tools)
-    return _graph_cache[tool_names]
-
-
-# ---------------------------------------------------------------------------
 # Public helper — used by bot gateways in-process
 # ---------------------------------------------------------------------------
 
@@ -83,8 +69,9 @@ async def get_graph_for_employee(
         mcp_tools = await _resolve_mcp_tools(db, org_id, employee_id, template.allowed_mcp_servers)
 
     all_tools = list(BUILT_IN_TOOLS) + mcp_tools
-    tool_names = frozenset(t.name for t in all_tools)
-    graph = _get_or_build_graph(tool_names, all_tools)
+    # MCP tools retain connection-specific credentials, so compile this
+    # employee's concrete tool instances into a request-local graph.
+    graph = build_graph(all_tools)
 
     return graph, all_tools
 
@@ -258,6 +245,7 @@ async def run_agent(
             "thread_id": thread_key,
             "platform": data.platform,
             "channel_id": data.channel_id,
+            "armoriq_user_email": _current_user.email,
         }
     }
 
