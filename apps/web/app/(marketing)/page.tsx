@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useIsSignedIn } from "@/hooks/use-auth";
 import { FlowerDivider } from "@/components/flower-divider";
-import { ArrowDiagonal, ArrowRight } from "@/components/ui/button-arrow";
+import { ArrowRight } from "@/components/ui/button-arrow";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 
 const steps = [
@@ -44,21 +44,11 @@ export default function Home() {
           Your next favorite AI employee.
         </h1>
         <p className="mt-4 max-w-3xl text-center text-lg leading-relaxed text-muted-foreground">
-          Build your own AI coworkers with their own memory. They learn and
-          remember over time, handle the boring tasks without complaining, and
-          actually remember what matters across every session. Powered by
-          Cognee&rsquo;s memory layer.
-        </p>
-        <p className="mt-4 text-sm text-muted-foreground/60">
-          Powered by{" "}
-          <a
-            href="https://cognee.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2"
-          >
-            Cognee
-          </a>
+          Build your own AI coworkers with persistent memory. They learn over
+          time, handle the boring tasks without complaining, and retain useful
+          context across every session through a persistent knowledge graph.
+          ArmorIQ governs every connected action, allowing routine work to flow
+          while stopping out-of-scope requests before execution.
         </p>
         <div className="mt-10 flex items-center gap-4">
           <Link
@@ -345,21 +335,6 @@ export default function Home() {
           />
         </div>
 
-        <p className="mx-auto mt-16 max-w-lg text-center text-sm leading-relaxed text-muted-foreground/70">
-          OpenHuman uses Cognee to power agent memory — giving each specialist
-          persistent context across every conversation, call, and thread.
-        </p>
-        <div className="mt-4 flex justify-center">
-          <a
-            href="https://cognee.ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group/button inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-primary px-2.5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80"
-          >
-            Cognee
-            <ArrowDiagonal />
-          </a>
-        </div>
       </section>
 
       <section className="w-full max-w-7xl px-6 pb-24">
