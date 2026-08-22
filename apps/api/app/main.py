@@ -134,9 +134,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_build_allowed_origins(),
     allow_origin_regex=(
-        r"https://openhuman\.icyzh\.dev"
-        r"|https://openhooman\.icyzh\.dev"
-        r"|https://.*\.vercel\.app"
+        r"https://.*\.vercel\.app"
         r"|https://.*\.up\.railway\.app"
         r"|http://localhost(:\d+)?"
         r"|http://127\.0\.0\.1(:\d+)?"

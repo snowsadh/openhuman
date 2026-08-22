@@ -2,7 +2,6 @@
 
 Revision ID: 60e6617d105f
 Revises: ef7cebf449fe
-Create Date: 2026-07-05 07:35:00.000000
 
 The 'sales' employee type was added to the model/schema layer but the
 database CHECK constraint created in 522a1ad33217 was never updated,

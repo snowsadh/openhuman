@@ -2,7 +2,6 @@
 
 Revision ID: b8f8e6df9c21
 Revises: 8c3855eb11a5
-Create Date: 2026-07-05 00:00:00.000000
 """
 
 import sqlalchemy as sa
