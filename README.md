@@ -8,7 +8,9 @@ or out-of-scope actions stop before execution.
 
 ## Architecture
 
-![OpenHuman architecture](docs/assets/architecture.jpeg)
+<p align="center">
+  <img src="docs/assets/architecture.jpeg" alt="OpenHuman architecture" width="680" />
+</p>
 
 ### ArmorIQ enforcement flow
 
@@ -38,6 +40,20 @@ flowchart LR
 5. ArmorIQ allows routine actions and holds or blocks actions that cross the
    approved boundary.
 6. Every decision is recorded for review and accountability.
+
+## Example: protected incident triage
+
+An engineering coworker receives an incident report in Slack, recalls the
+relevant runbook, and creates a GitHub issue in the team's private repository.
+That is expected work, so ArmorIQ allows it automatically.
+
+Now suppose the report contains a malicious instruction telling the coworker
+to publish the same incident details in a public repository. The agent reaches
+for the same `create_issue` tool; only the repository parameter is different.
+A keyword filter sees two ordinary issue-creation calls, but ArmorIQ verifies
+the exact destination against the signed intent and policy. It holds the public
+call before GitHub receives it, records the decision, and waits for an
+administrator to approve or deny it.
 
 ## What you can build
 
