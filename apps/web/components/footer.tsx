@@ -16,18 +16,13 @@ export function Footer() {
           </Link>
 
           <p className="text-sm text-white/50">
-            Built with{" "}
-            <span role="img" aria-label="love">
-              ❤️
-            </span>{" "}
-            for the Cognee hackathon
+            Autonomous coworkers, governed by ArmorIQ.
           </p>
         </div>
 
         <div className="mt-12 border-t border-white/10 pt-8">
           <p className="text-center text-sm text-white/30">
-            &copy; 2026 OpenHuman. All rights reserved. Built for the Cognee
-            hackathon.
+            &copy; 2026 OpenHuman. All rights reserved.
           </p>
         </div>
       </div>

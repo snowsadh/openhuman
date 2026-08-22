@@ -26,8 +26,5 @@ Outlines the embedded cognitive memory engine, multi-tenant permission layers, t
 ### 6. [Model Context Protocol (MCP)](mcp_integration.md)
 Developer guide to dynamic tool integrations, OAuth authentication, client connections, rate-limiting, and circuit breaker middleware.
 
-### 7. [Bot Gateway Manager](bot_gateway.md)
-Details on Slack and Discord chat integrations, Socket Mode connections, workspace shared vs. per-employee configurations, and interactive escalation flows.
-
-### 8. [DevOps & Deployment](devops_deployment.md)
+### 7. [DevOps & Deployment](devops_deployment.md)
 Step-by-step developer setup commands (Bun and uv), API client generation, production Docker configurations, and environment variables specifications.

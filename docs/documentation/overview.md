@@ -27,6 +27,7 @@ graph TB
             API["FastAPI App Factory & Router"]
             GW["Bot Gateway Manager"]
             Agent["LangGraph Agent Execution Engine"]
+            ArmorIQ["ArmorIQ Enforcement Boundary"]
             MemoryService["Memory Service (Cognee wrapper)"]
             Queue["Async Job Queue (Postgres-backed)"]
         end
@@ -69,7 +70,8 @@ graph TB
 
     %% External services
     Agent --> OR
-    Agent --> MCPServers
+    Agent --> ArmorIQ
+    ArmorIQ --> MCPServers
     MemoryService --> SGAI
 ```
 
@@ -131,6 +133,7 @@ OpenHuman leverages modern, performant libraries across all levels of the applic
 | **Backend** | Package Manager | **uv (astral)** | Near-instant Python virtual environment sync and dependency resolution. |
 | **Backend** | ORM & Migrations | **SQLAlchemy 2.0 & Alembic** | Type-safe SQL mappings, async database driver capabilities, structured schema versioning. |
 | **Backend** | Agent Graph | **LangGraph (Python)** | State-preserving cyclical agent execution flows. |
+| **Backend** | Action Governance | **ArmorIQ** | Signed intent plans and allow, hold, or block enforcement for MCP actions. |
 | **Backend** | Cognitive Memory | **Cognee** | Hybrid knowledge graph, vector indexing, and automatic entity extraction. |
 | **Database** | Core Data Store | **PostgreSQL 16** | Industrial-grade reliability, transactional support for queueing and checkpointing. |
 | **Chat Clients** | Gateway Bots | **discord.py & slack-bolt** | Native WebSocket listeners (Socket Mode on Slack) ensuring low-latency gateway communication. |
@@ -144,6 +147,9 @@ All AI services, database interactions, cognitive indexing, and webhook gateways
 
 ### Single-Process Bot Gateway
 Rather than running a fleet of external microservice containers for each bot instance, OpenHuman runs a unified gateway manager inside the main FastAPI application lifecycle. It dynamically hooks into active database configs and connects/disconnects WebSocket clients using async tasks.
+
+### Governed MCP Execution
+Before an MCP action runs, OpenHuman captures its plan with ArmorIQ and sends the exact tool request through ArmorIQ's shared enforcement boundary. In-plan calls proceed automatically; held or blocked calls never reach the MCP server unless ArmorIQ authorizes them. Each decision is recorded in the activity feed.
 
 ### Asynchronous Tool execution
 Heavy tasks (e.g. PDF analysis or web crawling) are handled asynchronously. If a tool requires more than a few seconds, it enqueues a database job and immediately completes the graph run, freeing the bot connection. An independent worker pool picks up the job and posts the results back to the thread when finished.
