@@ -22,7 +22,7 @@ RUN bun install
 
 COPY --from=pruner /app/out/full/ .
 
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_URL=https://openhuman-web.zopcloud.zop.dev
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
