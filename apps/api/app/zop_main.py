@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
+from sqlalchemy import text
 
 # Register every SQLAlchemy model before migrations and request handling so
 # relationship strings can be resolved without importing heavyweight routers.
@@ -31,6 +32,7 @@ from app.activity.router import router as activity_router
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
 from app.core.config import settings
+from app.core.database import Base, engine
 from app.documents.router import router as doc_router
 from app.employees.router import router as emp_router
 from app.health.router import router as health_router
@@ -73,6 +75,18 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         )
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         logger.exception("Database migration failed; continuing API startup")
+        try:
+            async with engine.begin() as connection:
+                users_table = await connection.scalar(
+                    text("SELECT to_regclass('public.users')")
+                )
+                if users_table is None:
+                    logger.warning(
+                        "Database is empty; creating the current schema from ORM metadata"
+                    )
+                    await connection.run_sync(Base.metadata.create_all)
+        except Exception:
+            logger.exception("Empty-database schema bootstrap failed")
     else:
         logger.info("Database migrations completed")
     yield
