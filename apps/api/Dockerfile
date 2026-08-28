@@ -36,4 +36,4 @@ ENV PYTHONUNBUFFERED=1 \
     COGNEE_DATA_DIR=/app/cognee_data \
     UPLOAD_DIR=/app/uploads
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn ${OPENHUMAN_API_MODULE:-app.main:app} --host 0.0.0.0 --port ${PORT:-8000}"]
