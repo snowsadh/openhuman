@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 # Register every SQLAlchemy model before migrations and request handling so
 # relationship strings can be resolved without importing heavyweight routers.
@@ -66,29 +66,36 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     paths that need the database can report their own actionable error while
     the service stays observable.
     """
-    logger.info("Running database migrations")
-    try:
-        subprocess.run(
-            ["alembic", "upgrade", "heads"],
-            check=True,
-            timeout=120,
-        )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        logger.exception("Database migration failed; continuing API startup")
+    if settings.database_url.startswith("mysql+"):
         try:
             async with engine.begin() as connection:
-                users_table = await connection.scalar(
-                    text("SELECT to_regclass('public.users')")
-                )
-                if users_table is None:
-                    logger.warning(
-                        "Database is empty; creating the current schema from ORM metadata"
-                    )
-                    await connection.run_sync(Base.metadata.create_all)
+                await connection.run_sync(Base.metadata.create_all)
         except Exception:
-            logger.exception("Empty-database schema bootstrap failed")
+            logger.exception("MySQL schema bootstrap failed; continuing API startup")
     else:
-        logger.info("Database migrations completed")
+        logger.info("Running database migrations")
+        try:
+            subprocess.run(
+                ["alembic", "upgrade", "heads"],
+                check=True,
+                timeout=120,
+            )
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            logger.exception("Database migration failed; continuing API startup")
+            try:
+                async with engine.begin() as connection:
+                    table_names = await connection.run_sync(
+                        lambda sync_connection: inspect(sync_connection).get_table_names()
+                    )
+                    if "users" not in table_names:
+                        logger.warning(
+                            "Database is empty; creating the current schema from ORM metadata"
+                        )
+                        await connection.run_sync(Base.metadata.create_all)
+            except Exception:
+                logger.exception("Empty-database schema bootstrap failed")
+        else:
+            logger.info("Database migrations completed")
     yield
 
 
@@ -132,21 +139,21 @@ async def database_health() -> dict:
     }
     try:
         async with engine.connect() as connection:
-            column_rows = await connection.execute(
-                text(
-                    """
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_schema = 'public' AND table_name = 'users'
-                    """
+            table_names = await connection.run_sync(
+                lambda sync_connection: inspect(sync_connection).get_table_names()
+            )
+            actual_user_columns: set[str] = set()
+            if "users" in table_names:
+                actual_user_columns = set(
+                    await connection.run_sync(
+                        lambda sync_connection: [
+                            column["name"]
+                            for column in inspect(sync_connection).get_columns("users")
+                        ]
+                    )
                 )
-            )
-            actual_user_columns = {row[0] for row in column_rows}
-            version_table = await connection.scalar(
-                text("SELECT to_regclass('public.alembic_version')")
-            )
             versions: list[str] = []
-            if version_table is not None:
+            if "alembic_version" in table_names:
                 version_rows = await connection.execute(
                     text("SELECT version_num FROM alembic_version ORDER BY version_num")
                 )

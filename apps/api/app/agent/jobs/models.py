@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, Uuid, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, JSON, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -33,7 +32,7 @@ class AgentJob(Base):
     )
 
     id: Mapped[UUID] = mapped_column(
-        Uuid, primary_key=True, server_default=func.gen_random_uuid()
+        Uuid, primary_key=True, default=uuid4
     )
     employee_id: Mapped[UUID] = mapped_column(
         Uuid,
@@ -57,7 +56,7 @@ class AgentJob(Base):
         String(100), nullable=False, index=True
     )
     payload: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, comment="Tool arguments"
+        JSON, nullable=True, comment="Tool arguments"
     )
     schedule_id: Mapped[UUID | None] = mapped_column(
         Uuid,
@@ -88,7 +87,7 @@ class AgentJob(Base):
         Text, nullable=True, comment="Worker-written result"
     )
     progress: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=True, comment="Worker-updated progress blob"
+        JSON, nullable=True, comment="Worker-updated progress blob"
     )
     error: Mapped[str | None] = mapped_column(
         Text, nullable=True

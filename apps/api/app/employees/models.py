@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, Uuid, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, JSON, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -39,7 +38,7 @@ class Employee(Base):
     )
 
     id: Mapped[UUID] = mapped_column(
-        Uuid, primary_key=True, server_default=func.gen_random_uuid()
+        Uuid, primary_key=True, default=uuid4
     )
     org_id: Mapped[UUID] = mapped_column(
         Uuid,
@@ -49,10 +48,10 @@ class Employee(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    personality: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    personality: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     specialization: Mapped[str | None] = mapped_column(String(255), nullable=True)
     employee_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    duties: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    duties: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     # Bot tokens — encrypted at rest via AES-256-GCM
     discord_token_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -63,9 +62,9 @@ class Employee(Base):
     slack_team_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     slack_bot_user_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    mcp_connections: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    memory_policy: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    escalation_policy: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    mcp_connections: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    memory_policy: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    escalation_policy: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Cognee IDs — populated in Phase 4 fork
     cognee_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)

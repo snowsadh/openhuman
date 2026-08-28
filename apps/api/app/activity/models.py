@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, Uuid, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -21,7 +20,7 @@ class ActivityEvent(Base):
     __tablename__ = "activity_events"
 
     id: Mapped[UUID] = mapped_column(
-        Uuid, primary_key=True, server_default=func.gen_random_uuid()
+        Uuid, primary_key=True, default=uuid4
     )
     org_id: Mapped[UUID] = mapped_column(
         Uuid,
@@ -52,7 +51,7 @@ class ActivityEvent(Base):
         String(50), nullable=True, comment="succeeded | failed | pending | ..."
     )
     metadata_: Mapped[dict | None] = mapped_column(
-        "metadata", JSONB, nullable=True, comment="Extra structured payload"
+        "metadata", JSON, nullable=True, comment="Extra structured payload"
     )
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True

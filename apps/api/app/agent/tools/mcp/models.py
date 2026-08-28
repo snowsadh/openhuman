@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    JSON,
     String,
     Text,
     Uuid,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -29,7 +29,7 @@ class McpConnection(Base):
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, server_default=func.gen_random_uuid())
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     org_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("organizations.id", ondelete="CASCADE"),
@@ -64,7 +64,7 @@ class McpConnection(Base):
     )
 
     scopes: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True, comment="Granted OAuth scopes (or configured scopes)"
+        JSON, nullable=True, comment="Granted OAuth scopes (or configured scopes)"
     )
 
     status: Mapped[str] = mapped_column(String(50), default="connected", server_default="connected")

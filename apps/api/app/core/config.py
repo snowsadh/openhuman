@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 from pydantic import model_validator
@@ -55,8 +56,28 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_db_urls(self) -> "Settings":
-        if self.database_url.startswith("postgresql://"):
+        managed_dialect = os.getenv("DB_DIALECT", "").lower()
+        managed_host = os.getenv("DB_HOST", "")
+        managed_user = os.getenv("DB_USER", "")
+        managed_password = os.getenv("DB_PASSWORD", "")
+        managed_name = os.getenv("DB_NAME", "")
+        managed_port = os.getenv("DB_PORT", "3306")
+        if (
+            managed_dialect == "mysql"
+            and managed_host
+            and managed_user
+            and managed_password
+            and managed_name
+        ):
+            self.database_url = (
+                "mysql+asyncmy://"
+                f"{quote(managed_user, safe='')}:{quote(managed_password, safe='')}"
+                f"@{managed_host}:{managed_port}/{quote(managed_name, safe='')}"
+            )
+        elif self.database_url.startswith("postgresql://"):
             self.database_url = self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif self.database_url.startswith("mysql://"):
+            self.database_url = self.database_url.replace("mysql://", "mysql+asyncmy://", 1)
         return self
 
     # Encryption for bot tokens (AES-256-GCM, 32-byte key)
