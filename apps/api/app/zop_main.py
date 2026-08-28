@@ -29,7 +29,6 @@ import app.agent.tools.mcp.models  # noqa: F401
 import app.schedules.models  # noqa: F401
 
 from app.activity.router import router as activity_router
-from app.agent.router import router as agent_router
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
 from app.core.config import settings
@@ -38,6 +37,7 @@ from app.documents.router import router as doc_router
 from app.employees.router import router as emp_router
 from app.health.router import router as health_router
 from app.organizations.router import router as org_router
+from app.zop_agent_router import router as agent_router
 
 logger = logging.getLogger(__name__)
 database_bootstrap_error: dict[str, str] | None = None
