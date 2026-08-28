@@ -57,10 +57,24 @@ def _build_allowed_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
-    """Apply schema migrations without booting optional worker integrations."""
+    """Apply migrations without making an already-provisioned API crash-loop.
+
+    Zop restarts containers automatically. A transient database or migration
+    failure must not prevent the health endpoint from becoming ready; request
+    paths that need the database can report their own actionable error while
+    the service stays observable.
+    """
     logger.info("Running database migrations")
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
-    logger.info("Database migrations completed")
+    try:
+        subprocess.run(
+            ["alembic", "upgrade", "head"],
+            check=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        logger.exception("Database migration failed; continuing API startup")
+    else:
+        logger.info("Database migrations completed")
     yield
 
 
