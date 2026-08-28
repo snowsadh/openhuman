@@ -1,21 +1,37 @@
-"""Agent tool registry and built-in tool exports."""
+"""Agent tool exports, loaded only when an agent workflow requests them.
 
-from app.agent.tools.executor import BUILT_IN_TOOLS  # noqa: F401
-from app.agent.tools.registry import registry  # noqa: F401
+Database model imports pass through this package (for example
+``app.agent.tools.mcp.models``). Keeping the package initializer lightweight
+prevents model imports from loading every LangChain tool and optional SDK
+during API startup.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
+    """Provide the historical package exports without eager imports."""
+    if name == "BUILT_IN_TOOLS":
+        from app.agent.tools.executor import BUILT_IN_TOOLS
+
+        return BUILT_IN_TOOLS
+    if name == "registry":
+        from app.agent.tools.registry import registry
+
+        return registry
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def register_built_in_tools() -> None:
-    """Register all built-in tools with the ToolRegistry singleton.
-
-    Called once at import time. Each tool is tagged with a toolset,
-    risk level, and optional availability gate.
-    """
+    """Populate the optional ToolRegistry when registry-based use is needed."""
     from app.agent.tools.cronjob_tools import cronjob
     from app.agent.tools.delegate_task import delegate_task
+    from app.agent.tools.executor import BUILT_IN_TOOLS
+    from app.agent.tools.registry import registry
     from app.agent.tools.vision_tools import vision_analyze
 
-    # New tools first with correct toolset (before they get picked up
-    # from BUILT_IN_TOOLS below, which would tag them as "core").
     registry.register_safe(
         tool=delegate_task,
         toolset="delegation",
@@ -32,7 +48,6 @@ def register_built_in_tools() -> None:
         risk_level="low",
     )
 
-    # Remaining core tools
     for tool in BUILT_IN_TOOLS:
         registry.register_safe(
             tool=tool,
@@ -41,5 +56,4 @@ def register_built_in_tools() -> None:
         )
 
 
-# Build the registry singleton at import time
-register_built_in_tools()
+__all__ = ["BUILT_IN_TOOLS", "register_built_in_tools", "registry"]
