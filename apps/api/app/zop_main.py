@@ -115,6 +115,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/api/health/database", tags=["health"])
+async def database_health() -> dict:
+    """Report schema readiness without exposing credentials or application data."""
+    expected_user_columns = {
+        "id",
+        "clerk_id",
+        "email",
+        "name",
+        "password_hash",
+        "is_active",
+        "onboarding_completed",
+        "created_at",
+        "updated_at",
+    }
+    try:
+        async with engine.connect() as connection:
+            column_rows = await connection.execute(
+                text(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'users'
+                    """
+                )
+            )
+            actual_user_columns = {row[0] for row in column_rows}
+            version_table = await connection.scalar(
+                text("SELECT to_regclass('public.alembic_version')")
+            )
+            versions: list[str] = []
+            if version_table is not None:
+                version_rows = await connection.execute(
+                    text("SELECT version_num FROM alembic_version ORDER BY version_num")
+                )
+                versions = [row[0] for row in version_rows]
+        missing = sorted(expected_user_columns - actual_user_columns)
+        return {
+            "status": "ok" if not missing else "schema_incomplete",
+            "database_connected": True,
+            "users_table_present": bool(actual_user_columns),
+            "missing_user_columns": missing,
+            "alembic_versions": versions,
+        }
+    except Exception as exc:
+        logger.exception("Database health check failed")
+        return {
+            "status": "unavailable",
+            "database_connected": False,
+            "error_type": type(exc).__name__,
+        }
+
+
 app.include_router(health_router)
 app.include_router(activity_router)
 app.include_router(auth_router)
