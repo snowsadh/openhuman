@@ -29,14 +29,19 @@ logger = logging.getLogger(__name__)
 _ADMIN_EMAIL = "snow@openhuman.ai"  # the best admin
 
 
-async def init_cognee() -> None:
-    """Run Cognee migrations at startup. Call once in FastAPI lifespan."""
-    if os.getenv("COGNEE_STARTUP_ENABLED", "true").lower() not in {
+def is_cognee_enabled() -> bool:
+    """Return whether this deployment should initialize/use embedded Cognee."""
+    return os.getenv("COGNEE_STARTUP_ENABLED", "true").lower() in {
         "1",
         "true",
         "yes",
         "on",
-    }:
+    }
+
+
+async def init_cognee() -> None:
+    """Run Cognee migrations at startup. Call once in FastAPI lifespan."""
+    if not is_cognee_enabled():
         logger.info("Cognee startup initialization disabled; loading on demand")
         return
 

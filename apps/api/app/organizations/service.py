@@ -16,6 +16,7 @@ from app.memory.service import (
     forget_dataset,
     get_or_create_admin,
     grant_tenant_read,
+    is_cognee_enabled,
     remember,
 )
 from app.organizations.models import Organization
@@ -39,6 +40,9 @@ async def create_org(
     await db.refresh(org)
 
     # ── Cognee provisioning (best-effort, non-blocking) ──────────────────
+    if not is_cognee_enabled():
+        return org
+
     try:
         admin = await get_or_create_admin()
         tenant = await create_tenant(org.name, admin["id"])

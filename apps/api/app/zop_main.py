@@ -69,7 +69,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Running database migrations")
     try:
         subprocess.run(
-            ["alembic", "upgrade", "head"],
+            ["alembic", "upgrade", "heads"],
             check=True,
             timeout=120,
         )
