@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const apiOrigin =
+  process.env.OPENHUMAN_API_ORIGIN ??
+  "https://openhuman-api.zopcloud.zop.dev";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
@@ -9,7 +13,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://openhuman-api:8000/api/:path*",
+        destination: `${apiOrigin}/api/:path*`,
       },
     ];
   },
