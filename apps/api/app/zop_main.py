@@ -29,6 +29,7 @@ import app.agent.tools.mcp.models  # noqa: F401
 import app.schedules.models  # noqa: F401
 
 from app.activity.router import router as activity_router
+from app.agent.router import router as agent_router
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
 from app.core.config import settings
@@ -184,6 +185,7 @@ async def database_health() -> dict:
 
 app.include_router(health_router)
 app.include_router(activity_router)
+app.include_router(agent_router)
 app.include_router(auth_router)
 app.include_router(org_router)
 app.include_router(emp_router)
