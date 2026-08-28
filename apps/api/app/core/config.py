@@ -75,7 +75,9 @@ class Settings(BaseSettings):
                 f"@{managed_host}:{managed_port}/{quote(managed_name, safe='')}"
             )
         elif self.database_url.startswith("postgresql://"):
-            self.database_url = self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            self.database_url = self.database_url.replace(
+                "postgresql://", "postgresql+asyncpg://", 1
+            )
         elif self.database_url.startswith("mysql://"):
             self.database_url = self.database_url.replace("mysql://", "mysql+asyncmy://", 1)
         return self
@@ -111,6 +113,10 @@ class Settings(BaseSettings):
     armoriq_api_key: str = ""
     armoriq_request_timeout_seconds: int = 30
     armoriq_approval_timeout_seconds: int = 300
+    armoriq_register_url: str = "https://api.armoriq.ai/iap/sdk/register"
+    armoriq_proxy_url: str = "https://proxy.armoriq.ai"
+    armoriq_mcp_public_url: str = ""
+    armoriq_mcp_bearer_token: str = ""
 
     # Document storage
     upload_dir: str = "./uploads"

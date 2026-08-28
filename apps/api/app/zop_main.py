@@ -6,10 +6,10 @@ through ``app.main`` for normal deployments, while this entrypoint keeps the
 core web application usable within ZopDay's smaller service memory limit.
 """
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 import logging
 import subprocess
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 
 from fastapi import FastAPI
@@ -19,15 +19,14 @@ from sqlalchemy import inspect, text
 
 # Register every SQLAlchemy model before migrations and request handling so
 # relationship strings can be resolved without importing heavyweight routers.
+import app.agent.jobs.models  # noqa: F401
+import app.agent.tools.mcp.models  # noqa: F401
 import app.auth.models  # noqa: F401
 import app.channel_assignments.models  # noqa: F401
 import app.documents.models  # noqa: F401
 import app.employees.models  # noqa: F401
 import app.organizations.models  # noqa: F401
-import app.agent.jobs.models  # noqa: F401
-import app.agent.tools.mcp.models  # noqa: F401
 import app.schedules.models  # noqa: F401
-
 from app.activity.router import router as activity_router
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
@@ -38,6 +37,7 @@ from app.employees.router import router as emp_router
 from app.health.router import router as health_router
 from app.organizations.router import router as org_router
 from app.zop_agent_router import router as agent_router
+from app.zop_armoriq import router as armoriq_router
 
 logger = logging.getLogger(__name__)
 database_bootstrap_error: dict[str, str] | None = None
@@ -186,6 +186,7 @@ async def database_health() -> dict:
 app.include_router(health_router)
 app.include_router(activity_router)
 app.include_router(agent_router)
+app.include_router(armoriq_router)
 app.include_router(auth_router)
 app.include_router(org_router)
 app.include_router(emp_router)

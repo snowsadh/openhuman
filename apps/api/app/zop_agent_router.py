@@ -4,18 +4,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import httpx
+from armoriq_sdk.exceptions import ArmorIQException
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.activity.service import record_activity
 from app.auth.models import User
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.employees.models import Employee
 from app.organizations.models import Organization
+from app.zop_armoriq import ArmorIQRuntimeError, generate_response_through_armoriq
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
@@ -44,7 +46,7 @@ async def run_agent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> AgentResponse:
-    """Run an authorized employee prompt through OpenAI without heavy graph imports."""
+    """Run an authorized employee response through ArmorIQ's MCP boundary."""
     employee = await db.scalar(
         select(Employee)
         .join(Organization, Organization.id == Employee.org_id)
@@ -65,41 +67,67 @@ async def run_agent(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="OpenAI is not configured",
         )
+    if not settings.armoriq_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="ArmorIQ is not configured",
+        )
 
     system_prompt = data.system_prompt_template or (
         f"You are {employee.name}, {employee.role or 'an AI assistant'}. "
         "Be accurate, concise, and helpful."
     )
-    base_url = (settings.openai_base_url or "https://api.openai.com/v1").rstrip("/")
     try:
-        async with httpx.AsyncClient(timeout=45) as client:
-            response = await client.post(
-                f"{base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {settings.openai_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": settings.openai_model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": data.content},
-                    ],
-                    "temperature": 0.2,
-                },
+        content, plan_hash = await generate_response_through_armoriq(
+            content=data.content,
+            system_prompt=system_prompt,
+            employee_id=str(employee.id),
+            user_email=current_user.email,
+        )
+    except (ArmorIQException, ArmorIQRuntimeError) as exc:
+        try:
+            await record_activity(
+                db,
+                employee.org_id,
+                "armoriq_blocked",
+                f"ArmorIQ blocked response generation for {employee.name}",
+                employee_id=employee.id,
+                employee_name=employee.name,
+                platform=data.platform,
+                status="blocked",
+                metadata={"reason_type": type(exc).__name__},
             )
-            response.raise_for_status()
-            payload = response.json()
-    except httpx.HTTPStatusError as exc:
+        except Exception:
+            pass
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"OpenAI returned HTTP {exc.response.status_code}",
-        ) from exc
-    except (httpx.HTTPError, ValueError, KeyError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="OpenAI request failed",
+            detail="ArmorIQ governance failed closed",
         ) from exc
 
-    content = payload["choices"][0]["message"]["content"]
-    return AgentResponse(response=content, tool_calls_count=0)
+    await record_activity(
+        db,
+        employee.org_id,
+        "armoriq_plan",
+        "ArmorIQ signed the response-generation plan",
+        employee_id=employee.id,
+        employee_name=employee.name,
+        platform=data.platform,
+        status="succeeded",
+        metadata={"mcp": "openhuman-zop", "action": "generate_response"},
+    )
+    await record_activity(
+        db,
+        employee.org_id,
+        "armoriq_allowed",
+        "ArmorIQ allowed governed response generation",
+        employee_id=employee.id,
+        employee_name=employee.name,
+        platform=data.platform,
+        status="succeeded",
+        metadata={
+            "mcp": "openhuman-zop",
+            "action": "generate_response",
+            "plan_hash": plan_hash,
+        },
+    )
+    return AgentResponse(response=content, tool_calls_count=1)
