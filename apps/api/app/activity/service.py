@@ -370,10 +370,11 @@ async def get_activity_feed(
             ActivityEvent.occurred_at >= date_from,
             ActivityEvent.occurred_at <= date_to,
         ]
-        if event_types:
-            safe_types = [event for event in event_types if event in _ALLOWED_EVENT_TYPES]
-            if safe_types:
-                filters.append(ActivityEvent.event_type.in_(safe_types))
+        safe_types = [
+            event for event in (event_types or []) if event in _ALLOWED_EVENT_TYPES
+        ]
+        if safe_types:
+            filters.append(ActivityEvent.event_type.in_(safe_types))
         if employee_id is not None:
             filters.append(ActivityEvent.employee_id == employee_id)
         if employee_type:
@@ -392,15 +393,15 @@ async def get_activity_feed(
                 | func.coalesce(ActivityEvent.description, "").ilike(search)
             )
 
-        total = await db.scalar(
+        recorded_total = await db.scalar(
             select(func.count()).select_from(ActivityEvent).where(*filters)
         ) or 0
+        source_limit = offset + limit
         result = await db.execute(
             select(ActivityEvent)
             .where(*filters)
             .order_by(ActivityEvent.occurred_at.desc())
-            .offset(offset)
-            .limit(limit)
+            .limit(source_limit)
         )
         events = [
             ActivityEventResponse(
@@ -417,6 +418,120 @@ async def get_activity_feed(
             )
             for event in result.scalars()
         ]
+
+        employee_filters = [Employee.org_id == org_id]
+        if employee_id is not None:
+            employee_filters.append(Employee.id == employee_id)
+        if employee_type:
+            employee_filters.append(Employee.employee_type == employee_type)
+
+        include_created = not safe_types or "employee_created" in safe_types
+        include_updated = not safe_types or "employee_updated" in safe_types
+        search_text = q.casefold() if q else None
+        employee_total = 0
+
+        if include_created:
+            created_filters = [
+                *employee_filters,
+                Employee.created_at >= date_from,
+                Employee.created_at <= date_to,
+            ]
+            if search_text and search_text not in "employee created":
+                created_filters.append(Employee.name.ilike(f"%{q}%"))
+            employee_total += await db.scalar(
+                select(func.count()).select_from(Employee).where(*created_filters)
+            ) or 0
+            created_result = await db.execute(
+                select(Employee)
+                .where(*created_filters)
+                .order_by(Employee.created_at.desc())
+                .limit(source_limit)
+            )
+            events.extend(
+                ActivityEventResponse(
+                    id=f"employee_created:{employee.id}",
+                    event_type="employee_created",
+                    summary=f'Employee "{employee.name}" created',
+                    employee_id=employee.id,
+                    employee_name=employee.name,
+                    status=employee.status,
+                    metadata={
+                        "employee_type": employee.employee_type,
+                        "role": employee.role,
+                    },
+                    occurred_at=employee.created_at,
+                )
+                for employee in created_result.scalars()
+            )
+
+        if include_updated:
+            updated_filters = [
+                *employee_filters,
+                Employee.updated_at.is_not(None),
+                Employee.updated_at >= date_from,
+                Employee.updated_at <= date_to,
+            ]
+            if search_text and not any(
+                search_text in label
+                for label in (
+                    "employee updated",
+                    "employee activated",
+                    "employee deactivated",
+                    "employee suspended",
+                )
+            ):
+                updated_filters.append(Employee.name.ilike(f"%{q}%"))
+            employee_total += await db.scalar(
+                select(func.count()).select_from(Employee).where(*updated_filters)
+            ) or 0
+            updated_result = await db.execute(
+                select(Employee)
+                .where(*updated_filters)
+                .order_by(Employee.updated_at.desc())
+                .limit(source_limit)
+            )
+            for employee in updated_result.scalars():
+                action = {
+                    "active": "activated",
+                    "inactive": "deactivated",
+                    "suspended": "suspended",
+                }.get(employee.status, "updated")
+                occurred_at = employee.updated_at
+                if occurred_at is None:
+                    continue
+                timestamp = int(
+                    (
+                        occurred_at
+                        if occurred_at.tzinfo
+                        else occurred_at.replace(tzinfo=timezone.utc)
+                    ).timestamp()
+                )
+                events.append(
+                    ActivityEventResponse(
+                        id=f"employee_updated:{employee.id}:{timestamp}",
+                        event_type="employee_updated",
+                        summary=f'Employee "{employee.name}" {action}',
+                        employee_id=employee.id,
+                        employee_name=employee.name,
+                        status=employee.status,
+                        metadata={
+                            "employee_type": employee.employee_type,
+                            "status": employee.status,
+                        },
+                        occurred_at=occurred_at,
+                    )
+                )
+
+        events.sort(
+            key=lambda event: (
+                event.occurred_at
+                if event.occurred_at.tzinfo
+                else event.occurred_at.replace(tzinfo=timezone.utc)
+            ),
+            reverse=True,
+        )
+        total = recorded_total + employee_total
+        events = events[offset:source_limit]
         next_offset = offset + limit if offset + limit < total else None
         return ActivityFeedResponse(
             events=events,
