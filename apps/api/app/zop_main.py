@@ -39,6 +39,7 @@ from app.health.router import router as health_router
 from app.organizations.router import router as org_router
 
 logger = logging.getLogger(__name__)
+database_bootstrap_error: dict[str, str] | None = None
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -67,10 +68,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     the service stays observable.
     """
     if settings.database_url.startswith("mysql+"):
+        global database_bootstrap_error
         try:
             async with engine.begin() as connection:
                 await connection.run_sync(Base.metadata.create_all)
-        except Exception:
+        except Exception as exc:
+            database_bootstrap_error = {
+                "error_type": type(exc).__name__,
+                "message": str(getattr(exc, "orig", exc))[:500],
+            }
             logger.exception("MySQL schema bootstrap failed; continuing API startup")
     else:
         logger.info("Running database migrations")
@@ -165,6 +171,7 @@ async def database_health() -> dict:
             "users_table_present": bool(actual_user_columns),
             "missing_user_columns": missing,
             "alembic_versions": versions,
+            "bootstrap_error": database_bootstrap_error,
         }
     except Exception as exc:
         logger.exception("Database health check failed")

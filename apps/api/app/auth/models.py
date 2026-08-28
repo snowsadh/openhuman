@@ -28,9 +28,9 @@ class User(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=True, server_default="true")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("1"))
     onboarding_completed: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=text("true")
+        Boolean, default=False, server_default=text("0")
     )
 
     created_at: Mapped[datetime] = mapped_column(
