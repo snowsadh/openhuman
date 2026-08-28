@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select, text
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.activity.models import ActivityEvent
@@ -13,7 +13,9 @@ from app.activity.schemas import (
     ActivityFeedResponse,
     ActivityStatsResponse,
 )
+from app.agent.jobs.models import AgentJob
 from app.core.config import settings
+from app.documents.models import Document
 from app.employees.models import Employee
 
 _PAGE_SIZE = 50
@@ -616,6 +618,78 @@ async def get_activity_stats(
         hour=0, minute=0, second=0, microsecond=0
     )
     today_end = today_start + timedelta(days=1)
+
+    if settings.database_url.startswith("mysql+"):
+        employee_ids = select(Employee.id).where(Employee.org_id == org_id)
+
+        async def _orm_count(model: type, *filters) -> int:
+            return await db.scalar(
+                select(func.count()).select_from(model).where(*filters)
+            ) or 0
+
+        agent_filters = (
+            AgentJob.created_at >= today_start,
+            AgentJob.created_at < today_end,
+            AgentJob.employee_id.in_(employee_ids),
+        )
+        agent_count = await _orm_count(AgentJob, *agent_filters)
+        doc_count = await _orm_count(
+            Document,
+            Document.uploaded_at >= today_start,
+            Document.uploaded_at < today_end,
+            Document.org_id == org_id,
+        )
+        emp_count = await _orm_count(
+            Employee,
+            Employee.org_id == org_id,
+            or_(
+                and_(
+                    Employee.created_at >= today_start,
+                    Employee.created_at < today_end,
+                ),
+                and_(
+                    Employee.updated_at >= today_start,
+                    Employee.updated_at < today_end,
+                ),
+            ),
+        )
+        tool_count = await _orm_count(
+            AgentJob,
+            *agent_filters,
+            AgentJob.job_type.in_(("web_search", "calculate", "fetch_url")),
+        )
+        human_count = await _orm_count(
+            AgentJob,
+            *agent_filters,
+            or_(
+                AgentJob.job_type.in_(("escalate_to_human", "human_escalation")),
+                AgentJob.status == "awaiting_approval",
+            ),
+        )
+        memory_count = await _orm_count(
+            AgentJob,
+            *agent_filters,
+            AgentJob.job_type.in_(
+                (
+                    "remember",
+                    "recall",
+                    "search_knowledge_base",
+                    "add_to_memory",
+                    "query_memory",
+                    "ingest_memory",
+                    "search_memory",
+                )
+            ),
+        )
+        return ActivityStatsResponse(
+            total_today=agent_count + doc_count + emp_count,
+            agent_runs=agent_count,
+            document_uploads=doc_count,
+            employee_events=emp_count,
+            tool_usages=tool_count,
+            human_escalations=human_count,
+            memory_operations=memory_count,
+        )
 
     async def _count(query: str, **params) -> int:
         result = await db.execute(text(query), params)
