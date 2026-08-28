@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.activity.models import ActivityEvent
@@ -13,6 +13,8 @@ from app.activity.schemas import (
     ActivityFeedResponse,
     ActivityStatsResponse,
 )
+from app.core.config import settings
+from app.employees.models import Employee
 
 _PAGE_SIZE = 50
 logger = logging.getLogger(__name__)
@@ -361,6 +363,66 @@ async def get_activity_feed(
         date_to = datetime.now(timezone.utc)
     if date_from is None:
         date_from = date_to - timedelta(days=90)
+
+    if settings.database_url.startswith("mysql+"):
+        filters = [
+            ActivityEvent.org_id == org_id,
+            ActivityEvent.occurred_at >= date_from,
+            ActivityEvent.occurred_at <= date_to,
+        ]
+        if event_types:
+            safe_types = [event for event in event_types if event in _ALLOWED_EVENT_TYPES]
+            if safe_types:
+                filters.append(ActivityEvent.event_type.in_(safe_types))
+        if employee_id is not None:
+            filters.append(ActivityEvent.employee_id == employee_id)
+        if employee_type:
+            filters.append(
+                ActivityEvent.employee_id.in_(
+                    select(Employee.id).where(
+                        Employee.org_id == org_id,
+                        Employee.employee_type == employee_type,
+                    )
+                )
+            )
+        if q:
+            search = f"%{q}%"
+            filters.append(
+                ActivityEvent.summary.ilike(search)
+                | func.coalesce(ActivityEvent.description, "").ilike(search)
+            )
+
+        total = await db.scalar(
+            select(func.count()).select_from(ActivityEvent).where(*filters)
+        ) or 0
+        result = await db.execute(
+            select(ActivityEvent)
+            .where(*filters)
+            .order_by(ActivityEvent.occurred_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        events = [
+            ActivityEventResponse(
+                id=f"recorded:{event.id}",
+                event_type=event.event_type,
+                summary=event.summary,
+                description=event.description,
+                employee_id=event.employee_id,
+                employee_name=event.employee_name,
+                platform=event.platform,
+                status=event.status,
+                metadata=event.metadata_,
+                occurred_at=event.occurred_at,
+            )
+            for event in result.scalars()
+        ]
+        next_offset = offset + limit if offset + limit < total else None
+        return ActivityFeedResponse(
+            events=events,
+            total=total,
+            next_offset=next_offset,
+        )
 
     where_clause = _build_org_and_filters(
         org_id, event_types, employee_id, employee_type, q,
