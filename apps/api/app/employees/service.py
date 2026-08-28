@@ -129,7 +129,11 @@ async def _to_response_with_runtime(db: AsyncSession, emp: Employee) -> Employee
         select(AgentJob).where(
             AgentJob.employee_id == emp.id,
             AgentJob.status.in_(["running", "awaiting_approval"]),
-        ).order_by(AgentJob.started_at.desc().nullslast(), AgentJob.created_at.desc())
+        ).order_by(
+            AgentJob.started_at.is_(None),
+            AgentJob.started_at.desc(),
+            AgentJob.created_at.desc(),
+        )
     )
     last = running or await db.scalar(
         select(AgentJob).where(
