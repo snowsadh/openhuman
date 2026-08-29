@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -114,6 +114,19 @@ type UploadEntry = {
   error?: string;
 };
 
+function getApiErrorMessage(error: ApiError, fallback: string): string {
+  try {
+    const body = JSON.parse(error.body) as { detail?: unknown };
+    if (typeof body.detail === "string" && body.detail.trim()) {
+      return body.detail;
+    }
+  } catch {
+    // The API may return plain text for infrastructure-level failures.
+  }
+
+  return error.body.trim() || fallback;
+}
+
 export default function OnboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -149,6 +162,7 @@ export default function OnboardPage() {
 
   // File upload
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const configurationRef = useRef<HTMLDivElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState<UploadEntry[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -168,11 +182,27 @@ export default function OnboardPage() {
 
   const isCreated = createdEmpId !== null;
 
+  useEffect(() => {
+    if (!isCreated) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      configurationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [isCreated]);
+
   // ── Pick bot → create employee ──────────────────────────────────────────
 
   const handleAddBot = useCallback(
     async (bot: FixedBot) => {
-      if (!orgId || addingType) return;
+      if (!orgId) {
+        const message = "Your workspace is still loading. Please wait a moment and try again.";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      if (addingType) return;
       setAddingType(bot.employee_type);
       setError(null);
       try {
@@ -184,15 +214,21 @@ export default function OnboardPage() {
         setCreatedEmpId(result.id);
         setCreatedBot(bot);
         setAddingType(null);
+        toast.success(`${bot.name} was added. Complete the setup below.`);
       } catch (err) {
         setAddingType(null);
+        let message: string;
         if (err instanceof ApiError && err.status === 409) {
-          setError(`${bot.name} is already deployed. Each bot type can only be added once.`);
+          message = `${bot.name} is already deployed. Each bot type can only be added once.`;
+        } else if (err instanceof ApiError) {
+          message = getApiErrorMessage(err, `Failed to add ${bot.name}. Please try again.`);
         } else if (err instanceof Error) {
-          setError(err.message);
+          message = err.message;
         } else {
-          setError("Failed to add bot. Please try again.");
+          message = `Failed to add ${bot.name}. Please try again.`;
         }
+        setError(message);
+        toast.error(message);
       }
     },
     [orgId, addingType, createMutation, queryClient],
@@ -380,8 +416,8 @@ export default function OnboardPage() {
             Add an AI employee to your team
           </h1>
           <p className="text-base text-muted-foreground">
-            Pick a bot to add to your Slack workspace. Each bot has a fixed identity
-            and specialization.
+            Pick an AI coworker, configure its responsibilities and knowledge, then
+            connect the tools your team uses.
           </p>
         </div>
 
@@ -397,6 +433,7 @@ export default function OnboardPage() {
           {FIXED_BOTS.map((bot) => {
             const isTaken = takenTypes.has(bot.employee_type);
             const isAdding = addingType === bot.employee_type;
+            const isSelected = createdBot?.employee_type === bot.employee_type;
             const isDisabled = isTaken || !!addingType || isCreated;
             const Icon = bot.icon;
 
@@ -406,8 +443,12 @@ export default function OnboardPage() {
                 type="button"
                 disabled={isDisabled}
                 onClick={() => handleAddBot(bot)}
+                aria-label={isTaken ? `${bot.name} is already active` : `Add ${bot.name} as ${bot.role}`}
+                aria-busy={isAdding}
                 className={`group relative flex flex-col gap-4 rounded-2xl border-2 p-5 text-left transition-colors ${
-                  isTaken
+                  isSelected
+                    ? "cursor-default border-primary bg-primary/5"
+                    : isTaken
                     ? "cursor-default border-border/50 bg-muted/20 opacity-60"
                     : isAdding
                       ? "border-primary bg-primary/5"
@@ -430,7 +471,12 @@ export default function OnboardPage() {
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">{bot.description}</p>
                 <div className="mt-auto pt-1">
-                  {isTaken ? (
+                  {isSelected ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <CheckCircle2Icon className="size-3.5" />
+                      Selected — finish setup below
+                    </span>
+                  ) : isTaken ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2Icon className="size-3.5" />
                       Active in your workspace
@@ -443,7 +489,7 @@ export default function OnboardPage() {
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70">
                       <BotIcon className="size-3.5" />
-                      Click to add to Slack
+                      Click to configure
                     </span>
                   )}
                 </div>
@@ -455,7 +501,7 @@ export default function OnboardPage() {
         {/* ── Configuration section (shown after employee is created) ────── */}
         {isCreated && createdBot && (
           <>
-            <div className="border-t border-border" />
+            <div ref={configurationRef} className="scroll-mt-6 border-t border-border" />
 
             <div className="flex flex-col gap-3 text-center">
               <h2 className="text-xl font-semibold tracking-tight text-foreground">
@@ -729,8 +775,7 @@ export default function OnboardPage() {
         {/* Footer hint */}
         {!isCreated && (
           <p className="text-center text-xs text-muted-foreground/60">
-            Each bot will appear in your Slack workspace with its own identity. Manage
-            them from your{" "}
+            After setup, manage every AI coworker and its connected tools from your{" "}
             <Link href="/dashboard" className="underline">
               dashboard
             </Link>{" "}
