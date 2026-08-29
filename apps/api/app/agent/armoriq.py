@@ -21,12 +21,12 @@ def parse_mcp_tool_name(tool_name: str) -> tuple[str, str] | None:
     return parts[1], parts[2]
 
 
-@lru_cache(maxsize=1)
-def get_armoriq_client() -> ArmorIQClient:
+@lru_cache(maxsize=8)
+def get_armoriq_client(agent_id: str = "openhuman") -> ArmorIQClient:
     """Create the SDK client lazily so non-MCP runs need no ArmorIQ key."""
     return ArmorIQClient(
         api_key=settings.armoriq_api_key,
-        agent_id="openhuman",
+        agent_id=agent_id,
         timeout=float(settings.armoriq_request_timeout_seconds),
     )
 

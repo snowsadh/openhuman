@@ -40,6 +40,18 @@ ROLE_RESPONSE_ACTIONS = {
     "support": (SUPPORT_MCP_SLUG, SUPPORT_RESPONSE_ACTION),
     "support_agent": (SUPPORT_MCP_SLUG, SUPPORT_RESPONSE_ACTION),
 }
+SERVER_AGENT_IDS = {
+    MCP_SLUG: "openhuman",
+    HR_MCP_SLUG: "openhuman-hr",
+    SALES_MCP_SLUG: "openhuman-sales",
+    SUPPORT_MCP_SLUG: "openhuman-support",
+}
+SERVER_SAFE_ACTIONS = {
+    MCP_SLUG: MCP_ACTION,
+    HR_MCP_SLUG: HR_RESPONSE_ACTION,
+    SALES_MCP_SLUG: SALES_RESPONSE_ACTION,
+    SUPPORT_MCP_SLUG: SUPPORT_RESPONSE_ACTION,
+}
 
 router = APIRouter(prefix="/api/agent/armoriq", tags=["agent"])
 
@@ -161,62 +173,59 @@ async def ensure_openhuman_mcp_registered() -> None:
         if _registration_ready:
             return
 
-        payload = {
-            "version": "v1",
-            "identity": {
-                "api_key": settings.armoriq_api_key,
-                "user_id": "openhuman-service",
-                "agent_id": "openhuman",
-            },
-            "environment": "production",
-            "proxy": {
-                "url": settings.armoriq_proxy_url,
-                "timeout": settings.armoriq_request_timeout_seconds,
-                "max_retries": 3,
-            },
-            "mcp_servers": [
-                {
-                    "id": slug,
-                    "url": (settings.armoriq_mcp_public_url.rstrip("/") + definition["path"]),
-                    "description": definition["description"],
-                    "auth": {
-                        "type": "bearer",
-                        "token": settings.armoriq_mcp_bearer_token,
-                    },
-                }
-                for slug, definition in MCP_SERVER_DEFINITIONS.items()
-            ],
-            "policy": {
-                "allow": [
-                    f"{MCP_SLUG}.{MCP_ACTION}",
-                    f"{HR_MCP_SLUG}.{HR_RESPONSE_ACTION}",
-                    f"{SALES_MCP_SLUG}.{SALES_RESPONSE_ACTION}",
-                    f"{SUPPORT_MCP_SLUG}.{SUPPORT_RESPONSE_ACTION}",
-                ],
-                "deny": [],
-            },
-            "intent": {
-                "ttl_seconds": settings.armoriq_approval_timeout_seconds + 60,
-                "require_csrg": True,
-            },
-        }
         try:
             async with httpx.AsyncClient(
                 timeout=float(settings.armoriq_request_timeout_seconds),
                 follow_redirects=True,
             ) as client:
-                response = await client.post(
-                    settings.armoriq_register_url,
-                    headers={
-                        "Authorization": f"Bearer {settings.armoriq_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                )
-            if response.status_code >= 400:
-                raise ArmorIQRuntimeError(
-                    f"ArmorIQ registration returned HTTP {response.status_code}"
-                )
+                for slug, definition in MCP_SERVER_DEFINITIONS.items():
+                    payload = {
+                        "version": "v1",
+                        "identity": {
+                            "api_key": settings.armoriq_api_key,
+                            "user_id": "openhuman-service",
+                            "agent_id": SERVER_AGENT_IDS[slug],
+                        },
+                        "environment": "production",
+                        "proxy": {
+                            "url": settings.armoriq_proxy_url,
+                            "timeout": settings.armoriq_request_timeout_seconds,
+                            "max_retries": 3,
+                        },
+                        "mcp_servers": [
+                            {
+                                "id": slug,
+                                "url": (
+                                    settings.armoriq_mcp_public_url.rstrip("/") + definition["path"]
+                                ),
+                                "description": definition["description"],
+                                "auth": {
+                                    "type": "bearer",
+                                    "token": settings.armoriq_mcp_bearer_token,
+                                },
+                            }
+                        ],
+                        "policy": {
+                            "allow": [f"{slug}.{SERVER_SAFE_ACTIONS[slug]}"],
+                            "deny": [],
+                        },
+                        "intent": {
+                            "ttl_seconds": settings.armoriq_approval_timeout_seconds + 60,
+                            "require_csrg": True,
+                        },
+                    }
+                    response = await client.post(
+                        settings.armoriq_register_url,
+                        headers={
+                            "Authorization": f"Bearer {settings.armoriq_api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json=payload,
+                    )
+                    if response.status_code >= 400:
+                        raise ArmorIQRuntimeError(
+                            f"ArmorIQ registration for {slug} returned HTTP {response.status_code}"
+                        )
         except httpx.HTTPError as exc:
             raise ArmorIQRuntimeError("ArmorIQ registration request failed") from exc
 
@@ -285,7 +294,7 @@ async def generate_response_through_armoriq(
     }
 
     def execute() -> tuple[str, str, str, str]:
-        client = get_armoriq_client()
+        client = get_armoriq_client(agent_id=SERVER_AGENT_IDS[mcp_slug])
         session = client.for_user(user_email).start_session(
             SessionOptions(
                 mode="proxy",
@@ -411,6 +420,7 @@ async def armoriq_status() -> dict[str, Any]:
         "servers": [
             {
                 "slug": slug,
+                "agent_id": SERVER_AGENT_IDS[slug],
                 "description": definition["description"],
                 "tools": list(definition["tools"]),
             }

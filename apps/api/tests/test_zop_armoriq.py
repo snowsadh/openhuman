@@ -113,7 +113,7 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
                 "app.zop_armoriq.ensure_openhuman_mcp_registered",
                 new=AsyncMock(),
             ),
-            patch("app.zop_armoriq.get_armoriq_client", return_value=client),
+            patch("app.zop_armoriq.get_armoriq_client", return_value=client) as client_factory,
         ):
             (
                 response,
@@ -132,6 +132,7 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
         self.assertEqual(plan_hash, "signed-plan")
         self.assertEqual(mcp_slug, zop_armoriq.HR_MCP_SLUG)
         self.assertEqual(action, zop_armoriq.HR_RESPONSE_ACTION)
+        client_factory.assert_called_once_with(agent_id="openhuman-hr")
         session.start_plan.assert_called_once()
         session.check.assert_called_once()
         session.dispatch.assert_called_once()
