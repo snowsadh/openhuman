@@ -18,13 +18,14 @@ import {
   Terminal,
   Activity,
   Globe,
-  Settings,
   MapPin,
   Calendar,
   PhoneCall,
   Layout,
   Flame,
   Loader2,
+  AlertCircle,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -354,7 +355,13 @@ export default function McpMarketplacePage() {
     query: { enabled: !!orgId },
   });
 
-  const { data: catalog, isLoading: catalogLoading } = useQuery({
+  const {
+    data: catalog,
+    isLoading: catalogLoading,
+    isError: catalogError,
+    isFetching: catalogFetching,
+    refetch: refetchCatalog,
+  } = useQuery({
     queryKey: [`/api/organizations/${orgId}/mcp-catalog`],
     queryFn: async () => {
       const token = localStorage.getItem("oh_token");
@@ -362,7 +369,7 @@ export default function McpMarketplacePage() {
       const res = await fetch(`${baseUrl}/api/organizations/${orgId}/mcp-catalog`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error("Failed to fetch catalog");
+      if (!res.ok) throw new Error(`Failed to fetch catalog (HTTP ${res.status})`);
       return res.json() as Promise<{ entries: CatalogEntry[] }>;
     },
     enabled: !!orgId,
@@ -587,10 +594,34 @@ export default function McpMarketplacePage() {
         <span>Showing {filteredServers.length} of {servers.length} MCP servers</span>
       </div>
 
+      {!catalogLoading && !catalogError && !empId ? (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
+          <Bot className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div>
+            <p className="font-semibold text-foreground">Browse first, connect after creating an AI employee</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The complete MCP directory is available now. Create an employee before connecting a server so OpenHuman knows which coworker should receive its tools.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* MCP Servers Grid */}
       {catalogLoading ? (
         <div className="flex items-center justify-center p-16">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : catalogError ? (
+        <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-destructive/40 rounded-xl bg-destructive/5">
+          <AlertCircle className="size-12 text-destructive/70 mb-3" />
+          <h3 className="font-semibold text-lg text-foreground">MCP directory could not be loaded</h3>
+          <p className="text-sm text-muted-foreground max-w-md mt-1">
+            The marketplace service did not return its catalog. Retry the request instead of treating this as an empty directory.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetchCatalog()} disabled={catalogFetching} className="mt-4">
+            {catalogFetching ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : null}
+            Retry loading
+          </Button>
         </div>
       ) : filteredServers.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -642,8 +673,9 @@ export default function McpMarketplacePage() {
                   <Button
                     size="sm"
                     variant={isInstalled ? "outline" : "default"}
-                    disabled={isLoading}
+                    disabled={isLoading || !empId}
                     onClick={(e) => handleInstallToggle(e, server)}
+                    title={!empId ? "Create an AI employee before connecting MCP tools" : undefined}
                     className={`h-7 px-3 text-[10px] font-bold transition-all rounded-md shrink-0 flex items-center gap-1 ${
                       isInstalled
                         ? "border-emerald-500/20 text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/10"
@@ -662,8 +694,8 @@ export default function McpMarketplacePage() {
                       </>
                     ) : (
                       <>
-                        <Download className="size-3" />
-                        Connect
+                        {empId ? <Download className="size-3" /> : <Bot className="size-3" />}
+                        {empId ? "Connect" : "Create employee first"}
                       </>
                     )}
                   </Button>
@@ -835,7 +867,8 @@ export default function McpMarketplacePage() {
                 </Button>
                 <Button
                   size="sm"
-                  disabled={connectingSlugs.has(selectedServer.id)}
+                  disabled={connectingSlugs.has(selectedServer.id) || !empId}
+                  title={!empId ? "Create an AI employee before connecting MCP tools" : undefined}
                   onClick={(e) => {
                     handleInstallToggle(e, selectedServer);
                     setSelectedServer(null);
@@ -849,7 +882,7 @@ export default function McpMarketplacePage() {
                   ) : connectedSlugs.has(selectedServer.id) ? (
                     "Disconnect"
                   ) : (
-                    "Connect Server"
+                    empId ? "Connect Server" : "Create employee first"
                   )}
                 </Button>
               </div>
