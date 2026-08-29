@@ -78,11 +78,12 @@ async def run_agent(
         "Be accurate, concise, and helpful."
     )
     try:
-        content, plan_hash = await generate_response_through_armoriq(
+        content, plan_hash, mcp_slug, action = await generate_response_through_armoriq(
             content=data.content,
             system_prompt=system_prompt,
             employee_id=str(employee.id),
             user_email=current_user.email,
+            employee_kind=employee.employee_type or employee.specialization or employee.role,
         )
     except (ArmorIQException, ArmorIQRuntimeError) as exc:
         try:
@@ -113,7 +114,7 @@ async def run_agent(
         employee_name=employee.name,
         platform=data.platform,
         status="succeeded",
-        metadata={"mcp": "openhuman-zop", "action": "generate_response"},
+        metadata={"mcp": mcp_slug, "action": action},
     )
     await record_activity(
         db,
@@ -125,8 +126,8 @@ async def run_agent(
         platform=data.platform,
         status="succeeded",
         metadata={
-            "mcp": "openhuman-zop",
-            "action": "generate_response",
+            "mcp": mcp_slug,
+            "action": action,
             "plan_hash": plan_hash,
         },
     )
