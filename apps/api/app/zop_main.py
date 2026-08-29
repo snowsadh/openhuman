@@ -28,6 +28,7 @@ import app.employees.models  # noqa: F401
 import app.organizations.models  # noqa: F401
 import app.schedules.models  # noqa: F401
 from app.activity.router import router as activity_router
+from app.agent.tools.mcp.catalog import register_catalog_connectors
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
 from app.core.config import settings
@@ -35,6 +36,8 @@ from app.core.database import Base, engine
 from app.documents.router import router as doc_router
 from app.employees.router import router as emp_router
 from app.health.router import router as health_router
+from app.mcp.router import oauth_router as mcp_oauth_router
+from app.mcp.router import router as mcp_router
 from app.organizations.router import router as org_router
 from app.zop_agent_router import router as agent_router
 from app.zop_armoriq import router as armoriq_router
@@ -68,6 +71,9 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     paths that need the database can report their own actionable error while
     the service stays observable.
     """
+    registered_connectors = register_catalog_connectors()
+    logger.info("Registered %d catalog MCP connectors for Zop", registered_connectors)
+
     if settings.database_url.startswith("mysql+"):
         global database_bootstrap_error
         try:
@@ -192,3 +198,5 @@ app.include_router(org_router)
 app.include_router(emp_router)
 app.include_router(ca_router)
 app.include_router(doc_router)
+app.include_router(mcp_router)
+app.include_router(mcp_oauth_router)

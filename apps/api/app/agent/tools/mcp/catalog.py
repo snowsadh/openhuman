@@ -92,6 +92,58 @@ def _register_manifest(
 
 
 # ── Communication ──────────────────────────────────────────────────────────
+# Manifest-backed connectors must also appear in the marketplace. Their
+# transport/auth details still come from YAML; these entries add the display
+# metadata consumed by the catalog API.
+_register_manifest("gmail", "Gmail",
+    "Search threads, read messages, create drafts, and manage Gmail labels.",
+    "Communication", "https://gmailmcp.googleapis.com/mcp/v1", "oauth2",
+    docs_url="https://developers.google.com/workspace/gmail/api/guides/configure-mcp-server")
+
+_register_manifest("github", "GitHub",
+    "Search code, manage repositories, create issues, and work with pull requests.",
+    "Development", "https://api.githubcopilot.com/mcp/", "pat_bearer",
+    docs_url="https://docs.github.com/en/enterprise-cloud@latest/copilot/developing-with-copilot/mcp/using-github-copilot-mcp-server")
+
+_register_manifest("notion", "Notion",
+    "Search, read, create, and update Notion pages and databases.",
+    "Productivity", "https://mcp.notion.com/mcp", "oauth2",
+    docs_url="https://developers.notion.com/docs/authorization")
+
+_register_manifest("vercel", "Vercel",
+    "Manage projects, deployments, domains, logs, and environment variables.",
+    "Development", "https://mcp.vercel.com", "oauth2",
+    docs_url="https://vercel.com/docs/rest-api")
+
+_register_manifest("n8n", "n8n",
+    "Search workflows, trigger runs, and build or edit workflows on an n8n instance.",
+    "Development", "", "pat_bearer",
+    docs_url="https://docs.n8n.io/build/ways-of-building-workflows/connect-to-n8n-mcp-server/",
+    requires_custom_server_url=True, request_timeout_seconds=60.0)
+
+_register_manifest("gamma", "Gamma",
+    "Generate and manage presentations, documents, and web pages.",
+    "Productivity", "https://mcp.gamma.app/mcp", "oauth2",
+    docs_url="https://gamma.app/docs")
+
+_register_manifest("canva", "Canva",
+    "Generate, edit, and export designs, presentations, PDFs, and images.",
+    "Productivity", "https://mcp.canva.com/mcp", "oauth2",
+    docs_url="https://www.canva.dev/docs/mcp/")
+
+_register_manifest("pitchdeck", "Pitch Deck Generator",
+    "Generate styled PowerPoint pitch decks locally without an API key.",
+    "Productivity", "", "none")
+
+_register_manifest("visualization", "Visualization",
+    "Create charts, plots, heatmaps, and network diagrams locally.",
+    "AI & Search", "", "none")
+
+_register_manifest("web_search", "Web Search",
+    "Search the public web for current information without an API key.",
+    "AI & Search", "https://rival-search-mcp.fly.dev/mcp", "none",
+    docs_url="https://github.com/taskiq/RivalSearchMCP")
+
 _register_manifest("slack", "Slack Channel Manager",
     "Search messages, read channel history, post messages, and manage workspace users and channels.",
     "Communication", "https://mcp.slack.com/mcp", "oauth2",
