@@ -5,12 +5,12 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ActivityEventResponseDescription } from './activityEventResponseDescription';
-import type { ActivityEventResponseEmployeeId } from './activityEventResponseEmployeeId';
-import type { ActivityEventResponseEmployeeName } from './activityEventResponseEmployeeName';
-import type { ActivityEventResponsePlatform } from './activityEventResponsePlatform';
-import type { ActivityEventResponseStatus } from './activityEventResponseStatus';
-import type { ActivityEventResponseMetadata } from './activityEventResponseMetadata';
+import type { ActivityEventResponseDescription } from "./activityEventResponseDescription";
+import type { ActivityEventResponseEmployeeId } from "./activityEventResponseEmployeeId";
+import type { ActivityEventResponseEmployeeName } from "./activityEventResponseEmployeeName";
+import type { ActivityEventResponsePlatform } from "./activityEventResponsePlatform";
+import type { ActivityEventResponseStatus } from "./activityEventResponseStatus";
+import type { ActivityEventResponseMetadata } from "./activityEventResponseMetadata";
 
 /**
  * A single unified activity event from any source table.

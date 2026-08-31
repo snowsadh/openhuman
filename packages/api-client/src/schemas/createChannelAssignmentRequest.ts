@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateChannelAssignmentRequestChannelName } from './createChannelAssignmentRequestChannelName';
+import type { CreateChannelAssignmentRequestChannelName } from "./createChannelAssignmentRequestChannelName";
 
 export interface CreateChannelAssignmentRequest {
   platform: string;

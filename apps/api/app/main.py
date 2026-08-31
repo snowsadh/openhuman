@@ -45,6 +45,7 @@ from app.governance.router import (
 from app.health.router import router as health_router
 from app.mcp.router import oauth_router as mcp_oauth_router
 from app.mcp.router import router as mcp_router
+from app.mcp.adapters import router as mcp_adapter_router
 from app.memory.router import router as memory_router
 from app.memory.service import init_cognee
 from app.organizations.router import router as org_router
@@ -184,4 +185,5 @@ app.include_router(slack_oauth_router)
 app.include_router(fixed_bots_router)
 app.include_router(mcp_router)
 app.include_router(mcp_oauth_router)
+app.include_router(mcp_adapter_router)
 app.include_router(schedules_router)

@@ -182,6 +182,10 @@ class Settings(BaseSettings):
     # no-auth modes.
     gmail_client_id: str = ""
     gmail_client_secret: str = ""
+    google_calendar_client_id: str = ""
+    google_calendar_client_secret: str = ""
+    slack_mcp_client_id: str = ""
+    slack_mcp_client_secret: str = ""
     notion_client_id: str = ""
     notion_client_secret: str = ""
     vercel_client_id: str = ""
@@ -190,11 +194,15 @@ class Settings(BaseSettings):
     github_client_secret: str = ""
     canva_client_id: str = ""
     canva_client_secret: str = ""
+    hubspot_client_id: str = ""
+    hubspot_client_secret: str = ""
 
     # The full redirect URI that OAuth providers send the user back to after consent.
     # Must be registered with each provider's OAuth app config.
     # Example: "https://api.example.com/api/mcp/oauth/callback"
     mcp_oauth_redirect_uri: str = ""
+    n8n_relay_mcp_url: str = ""
+    zendesk_mcp_url: str = ""
 
     @property
     def mcp_oauth_credentials(self) -> dict[str, dict[str, str]]:
@@ -215,6 +223,26 @@ class Settings(BaseSettings):
                 "client_id": gid,
                 "client_secret": _val(self.gmail_client_secret, "GMAIL_CLIENT_SECRET"),
             }
+        if calendar_id := _val(
+            self.google_calendar_client_id,
+            "GOOGLE_CALENDAR_CLIENT_ID",
+        ) or _val(self.gmail_client_id, "GMAIL_CLIENT_ID"):
+            creds["google-calendar"] = {
+                "client_id": calendar_id,
+                "client_secret": _val(
+                    self.google_calendar_client_secret,
+                    "GOOGLE_CALENDAR_CLIENT_SECRET",
+                )
+                or _val(self.gmail_client_secret, "GMAIL_CLIENT_SECRET"),
+            }
+        if slack_id := _val(self.slack_mcp_client_id, "SLACK_MCP_CLIENT_ID"):
+            creds["slack"] = {
+                "client_id": slack_id,
+                "client_secret": _val(
+                    self.slack_mcp_client_secret,
+                    "SLACK_MCP_CLIENT_SECRET",
+                ),
+            }
         if nid := _val(self.notion_client_id, "NOTION_CLIENT_ID"):
             creds["notion"] = {
                 "client_id": nid,
@@ -234,6 +262,14 @@ class Settings(BaseSettings):
             creds["canva"] = {
                 "client_id": cvid,
                 "client_secret": _val(self.canva_client_secret, "CANVA_CLIENT_SECRET"),
+            }
+        if hubspot_id := _val(self.hubspot_client_id, "HUBSPOT_CLIENT_ID"):
+            creds["hubspot"] = {
+                "client_id": hubspot_id,
+                "client_secret": _val(
+                    self.hubspot_client_secret,
+                    "HUBSPOT_CLIENT_SECRET",
+                ),
             }
         return creds
 
@@ -259,8 +295,7 @@ class Settings(BaseSettings):
                         key = bytes.fromhex(part)
                     except ValueError:
                         raise ValueError(
-                            f"encryption_key_previous entry #{i + 1} {part!r} "
-                            f"is not valid hex"
+                            f"encryption_key_previous entry #{i + 1} {part!r} is not valid hex"
                         ) from None
                     if len(key) != 32:
                         raise ValueError(

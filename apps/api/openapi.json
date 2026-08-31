@@ -1754,6 +1754,526 @@
         ]
       }
     },
+    "/api/agent/armoriq/status": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Armoriq Status",
+        "description": "Expose a secret-free, judge-friendly view of the live governance boundary.",
+        "operationId": "agent-armoriq_status",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Agent-Armoriq Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/armoriq/mcp": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Mcp Endpoint",
+        "description": "Serve the authenticated MCP endpoint used only by the ArmorIQ proxy.",
+        "operationId": "agent-mcp_endpoint",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/armoriq/mcp/{server_kind}": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Role Mcp Endpoint",
+        "description": "Serve one role-specific MCP inventory through the ArmorIQ proxy.",
+        "operationId": "agent-role_mcp_endpoint",
+        "parameters": [
+          {
+            "name": "server_kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Kind"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/approvals": {
+      "get": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "List Approvals",
+        "operationId": "approvals-list_approvals",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organization Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/approvals/{approval_id}": {
+      "get": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Get Approval",
+        "operationId": "approvals-get_approval",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Approval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/approvals/{approval_id}/approve": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Approve Request",
+        "operationId": "approvals-approve_request",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Approval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/approvals/{approval_id}/reject": {
+      "post": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Reject Request",
+        "operationId": "approvals-reject_request",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Approval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/approval-assignments": {
+      "get": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "List Approval Assignments",
+        "operationId": "approvals-list_approval_assignments",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalAssignmentResponse"
+                  },
+                  "title": "Response Approvals-List Approval Assignments"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "Replace Approval Assignments",
+        "operationId": "approvals-replace_approval_assignments",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalAssignmentsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalAssignmentResponse"
+                  },
+                  "title": "Response Approvals-Replace Approval Assignments"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/armoriq/metrics": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Armoriq Metrics",
+        "operationId": "agent-armoriq_metrics",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Organization Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArmorIQMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/memory/search": {
       "post": {
         "tags": [
@@ -2199,7 +2719,7 @@
           "mcp"
         ],
         "summary": "Delete Mcp Connection",
-        "description": "Revoke (mark as 'revoked') an employee's MCP connection.\n\nThe row is kept for audit purposes; credentials are not removed but\nwill no longer be resolved.",
+        "description": "Revoke (mark as 'revoked') an employee's MCP connection.\n\nThe row is kept for audit purposes while encrypted credentials are erased.",
         "operationId": "mcp-delete_mcp_connection",
         "security": [
           {
@@ -2254,13 +2774,91 @@
         }
       }
     },
+    "/api/organizations/{org_id}/employees/{emp_id}/mcp-connections/{slug}/verify": {
+      "post": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Verify Mcp Connection",
+        "description": "Run tools/list and, when requested, one exact read call through ArmorIQ.\n\nDiscovery alone produces ``discovered``. A connector becomes ``verified``\nonly after the selected tool executes through the signed intent boundary.",
+        "operationId": "mcp-verify_mcp_connection",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "emp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Emp Id"
+            }
+          },
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpVerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpVerificationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/organizations/{org_id}/employees/{emp_id}/mcp-connections/{slug}/install": {
       "get": {
         "tags": [
           "mcp"
         ],
         "summary": "Start OAuth install for an MCP connector",
-        "description": "Redirect the browser to the OAuth provider's authorize page.\n\nThe employee / org / connector are baked into a JWT-signed ``state``\nparameter so the callback can associate the tokens with the right\nrecord \u2014 no server-side session needed.\n\nFor connectors that don't have hardcoded OAuth URLs or client credentials\n(e.g. catalog-only entries like figma, jira, etc.), pass ``client_id``,\n``client_secret``, ``authorize_url``, and ``token_url`` as query parameters.",
+        "description": "Redirect the browser to the OAuth provider's authorize page.\n\nThe employee / org / connector are baked into a JWT-signed ``state``\nparameter so the callback can associate the tokens with the right\nrecord \u2014 no server-side session needed.\n\nOAuth client credentials are resolved only from server-side settings backed\nby Secrets Manager. Hosted MCP authorization endpoints are discovered from\nthe trusted manifest URL and are never accepted from request parameters.",
         "operationId": "mcp-mcp_oauth_install",
         "security": [
           {
@@ -2314,78 +2912,6 @@
               "title": "Redirect To"
             },
             "description": "URL to redirect back to after the OAuth callback"
-          },
-          {
-            "name": "client_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Override OAuth client_id (for connectors without hardcoded credentials)",
-              "title": "Client Id"
-            },
-            "description": "Override OAuth client_id (for connectors without hardcoded credentials)"
-          },
-          {
-            "name": "client_secret",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Override OAuth client_secret",
-              "title": "Client Secret"
-            },
-            "description": "Override OAuth client_secret"
-          },
-          {
-            "name": "authorize_url",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Override OAuth authorize_url (for connectors without hardcoded URLs)",
-              "title": "Authorize Url"
-            },
-            "description": "Override OAuth authorize_url (for connectors without hardcoded URLs)"
-          },
-          {
-            "name": "token_url",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Override OAuth token_url",
-              "title": "Token Url"
-            },
-            "description": "Override OAuth token_url"
           }
         ],
         "responses": {
@@ -2603,6 +3129,116 @@
               "title": "Error Description"
             },
             "description": "Human-readable OAuth error description"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/adapters/zendesk": {
+      "post": {
+        "tags": [
+          "mcp-adapters"
+        ],
+        "summary": "Zendesk Mcp",
+        "operationId": "mcp-adapters-zendesk_mcp",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Mcp-Adapters-Zendesk Mcp"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/adapters/n8n": {
+      "post": {
+        "tags": [
+          "mcp-adapters"
+        ],
+        "summary": "N8N Mcp Relay",
+        "operationId": "mcp-adapters-n8n_mcp_relay",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
           }
         ],
         "responses": {
@@ -3330,6 +3966,461 @@
         "title": "AgentResponse",
         "description": "Payload returned by the agent after compiling a response."
       },
+      "ApprovalActionResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approval": {
+            "$ref": "#/components/schemas/ApprovalRequestResponse"
+          },
+          "authority": {
+            "type": "string",
+            "title": "Authority",
+            "default": "armoriq"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "approval",
+          "message"
+        ],
+        "title": "ApprovalActionResponse"
+      },
+      "ApprovalAssignmentInput": {
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "title": "Agent Type"
+          },
+          "approver_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Approver User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_type",
+          "approver_user_id"
+        ],
+        "title": "ApprovalAssignmentInput"
+      },
+      "ApprovalAssignmentResponse": {
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "title": "Agent Type"
+          },
+          "approver_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Approver User Id"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Org Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_type",
+          "approver_user_id",
+          "id",
+          "org_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApprovalAssignmentResponse"
+      },
+      "ApprovalAssignmentsUpdate": {
+        "properties": {
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalAssignmentInput"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Assignments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignments"
+        ],
+        "title": "ApprovalAssignmentsUpdate"
+      },
+      "ApprovalListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalRequestResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ApprovalListResponse"
+      },
+      "ApprovalRequestResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Org Id"
+          },
+          "employee_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "plan_hash": {
+            "type": "string",
+            "title": "Plan Hash"
+          },
+          "token_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Id"
+          },
+          "delegation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delegation Id"
+          },
+          "mcp": {
+            "type": "string",
+            "title": "Mcp"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "redacted_parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Redacted Parameters"
+          },
+          "requester_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requester Email"
+          },
+          "assigned_approver_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Approver Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "execution_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Result"
+          },
+          "armoriq_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Armoriq Url"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "executed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "org_id",
+          "employee_id",
+          "job_id",
+          "plan_hash",
+          "token_id",
+          "delegation_id",
+          "mcp",
+          "action",
+          "redacted_parameters",
+          "requester_email",
+          "assigned_approver_id",
+          "status",
+          "reason",
+          "decision",
+          "execution_result",
+          "armoriq_url",
+          "expires_at",
+          "decided_at",
+          "executed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApprovalRequestResponse"
+      },
+      "ArmorIQMetricsResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total_plans": {
+            "type": "integer",
+            "title": "Total Plans"
+          },
+          "total_calls": {
+            "type": "integer",
+            "title": "Total Calls"
+          },
+          "allow_count": {
+            "type": "integer",
+            "title": "Allow Count"
+          },
+          "hold_count": {
+            "type": "integer",
+            "title": "Hold Count"
+          },
+          "block_count": {
+            "type": "integer",
+            "title": "Block Count"
+          },
+          "executed_count": {
+            "type": "integer",
+            "title": "Executed Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "pending_approvals": {
+            "type": "integer",
+            "title": "Pending Approvals"
+          },
+          "allow_percent": {
+            "type": "number",
+            "title": "Allow Percent"
+          },
+          "hold_percent": {
+            "type": "number",
+            "title": "Hold Percent"
+          },
+          "block_percent": {
+            "type": "number",
+            "title": "Block Percent"
+          },
+          "top_agents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Top Agents"
+          },
+          "top_mcps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Top Mcps"
+          },
+          "top_tools": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Top Tools"
+          },
+          "recent_plans": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Recent Plans"
+          },
+          "registration_healthy": {
+            "type": "boolean",
+            "title": "Registration Healthy"
+          },
+          "telemetry_healthy": {
+            "type": "boolean",
+            "title": "Telemetry Healthy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "total_plans",
+          "total_calls",
+          "allow_count",
+          "hold_count",
+          "block_count",
+          "executed_count",
+          "failed_count",
+          "pending_approvals",
+          "allow_percent",
+          "hold_percent",
+          "block_percent",
+          "top_agents",
+          "top_mcps",
+          "top_tools",
+          "recent_plans",
+          "registration_healthy",
+          "telemetry_healthy"
+        ],
+        "title": "ArmorIQMetricsResponse"
+      },
       "Body_documents-upload_document": {
         "properties": {
           "file": {
@@ -3398,6 +4489,21 @@
             "type": "boolean",
             "title": "Is Installed",
             "default": false
+          },
+          "catalog_state": {
+            "type": "string",
+            "title": "Catalog State",
+            "default": "setup_required"
+          },
+          "is_installable": {
+            "type": "boolean",
+            "title": "Is Installable",
+            "default": true
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status",
+            "default": "unverified"
           }
         },
         "type": "object",
@@ -3435,6 +4541,17 @@
               }
             ],
             "title": "Server Url"
+          },
+          "account_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Identifier"
           },
           "org_wide": {
             "type": "boolean",
@@ -3543,6 +4660,16 @@
             "type": "integer",
             "title": "Connection Count",
             "default": 0
+          },
+          "verified_connection_count": {
+            "type": "integer",
+            "title": "Verified Connection Count",
+            "default": 0
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status",
+            "default": "unverified"
           }
         },
         "type": "object",
@@ -4265,6 +5392,18 @@
             ],
             "title": "Scopes"
           },
+          "account_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Identifier",
+            "description": "Provider account identity, such as the Zendesk admin email"
+          },
           "org_wide": {
             "type": "boolean",
             "title": "Org Wide",
@@ -4327,6 +5466,63 @@
             "type": "string",
             "title": "Status"
           },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status",
+            "default": "unverified"
+          },
+          "discovered_tools": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discovered Tools"
+          },
+          "discovered_tool_count": {
+            "type": "integer",
+            "title": "Discovered Tool Count",
+            "default": 0
+          },
+          "verification_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Error"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified At"
+          },
+          "oauth_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Expires At"
+          },
           "is_org_wide": {
             "type": "boolean",
             "title": "Is Org Wide",
@@ -4360,6 +5556,60 @@
         ],
         "title": "McpConnectionRead",
         "description": "Public representation of a stored MCP connection."
+      },
+      "McpVerificationRequest": {
+        "properties": {
+          "probe_tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probe Tool",
+            "description": "Exact discovered tool name to invoke after tools/list succeeds"
+          },
+          "probe_parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Probe Parameters"
+          }
+        },
+        "type": "object",
+        "title": "McpVerificationRequest",
+        "description": "Verify discovery and optionally run one real read tool through ArmorIQ."
+      },
+      "McpVerificationResponse": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/McpConnectionRead"
+          },
+          "discovered_tools": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Discovered Tools"
+          },
+          "probe_executed": {
+            "type": "boolean",
+            "title": "Probe Executed",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connection",
+          "discovered_tools",
+          "message"
+        ],
+        "title": "McpVerificationResponse"
       },
       "MemoryIngestRequest": {
         "properties": {

@@ -5,10 +5,10 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { UpdateOrganizationRequestName } from './updateOrganizationRequestName';
-import type { UpdateOrganizationRequestDescription } from './updateOrganizationRequestDescription';
-import type { UpdateOrganizationRequestWhatItDoes } from './updateOrganizationRequestWhatItDoes';
-import type { UpdateOrganizationRequestWebsiteUrl } from './updateOrganizationRequestWebsiteUrl';
+import type { UpdateOrganizationRequestName } from "./updateOrganizationRequestName";
+import type { UpdateOrganizationRequestDescription } from "./updateOrganizationRequestDescription";
+import type { UpdateOrganizationRequestWhatItDoes } from "./updateOrganizationRequestWhatItDoes";
+import type { UpdateOrganizationRequestWebsiteUrl } from "./updateOrganizationRequestWebsiteUrl";
 
 export interface UpdateOrganizationRequest {
   name?: UpdateOrganizationRequestName;

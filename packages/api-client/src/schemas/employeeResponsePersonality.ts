@@ -5,6 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { EmployeeResponsePersonalityAnyOf } from './employeeResponsePersonalityAnyOf';
+import type { EmployeeResponsePersonalityAnyOf } from "./employeeResponsePersonalityAnyOf";
 
-export type EmployeeResponsePersonality = EmployeeResponsePersonalityAnyOf | null;
+export type EmployeeResponsePersonality =
+  EmployeeResponsePersonalityAnyOf | null;

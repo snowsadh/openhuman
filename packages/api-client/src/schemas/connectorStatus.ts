@@ -19,4 +19,6 @@ export interface ConnectorStatus {
   requires_custom_server_url?: boolean;
   is_connected?: boolean;
   connection_count?: number;
+  verified_connection_count?: number;
+  verification_status?: string;
 }

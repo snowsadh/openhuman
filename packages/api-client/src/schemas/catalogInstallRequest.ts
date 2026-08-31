@@ -5,8 +5,9 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { CatalogInstallRequestCredential } from './catalogInstallRequestCredential';
-import type { CatalogInstallRequestServerUrl } from './catalogInstallRequestServerUrl';
+import type { CatalogInstallRequestCredential } from "./catalogInstallRequestCredential";
+import type { CatalogInstallRequestServerUrl } from "./catalogInstallRequestServerUrl";
+import type { CatalogInstallRequestAccountIdentifier } from "./catalogInstallRequestAccountIdentifier";
 
 /**
  * Payload for installing a catalog entry as a connection.
@@ -15,5 +16,6 @@ export interface CatalogInstallRequest {
   /** API key, PAT, or access token for auth_types that need one */
   credential?: CatalogInstallRequestCredential;
   server_url?: CatalogInstallRequestServerUrl;
+  account_identifier?: CatalogInstallRequestAccountIdentifier;
   org_wide?: boolean;
 }

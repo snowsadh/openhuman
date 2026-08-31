@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { CatalogEntryRead } from './catalogEntryRead';
+import type { CatalogEntryRead } from "./catalogEntryRead";
 
 /**
  * Wrapper for listing catalog entries.

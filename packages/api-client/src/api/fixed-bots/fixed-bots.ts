@@ -5,9 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -17,19 +15,14 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
-import type {
-  FixedBotResponse
-} from '../../schemas';
+import type { FixedBotResponse } from "../../schemas";
 
-import { customInstance } from '../../mutator/custom-instance';
-
+import { customInstance } from "../../mutator/custom-instance";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * Return the list of all fixed bot identities.
@@ -39,91 +32,147 @@ page.  Only bots whose credentials are fully configured can be installed.
  * @summary List Fixed Bots
  */
 export const fixedBotsListFixedBots = (
-
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<FixedBotResponse[]>(
-      {url: `/api/fixed-bots`, method: 'GET', signal
-    },
-      options);
-    }
-
-
-
+  return customInstance<FixedBotResponse[]>(
+    { url: `/api/fixed-bots`, method: "GET", signal },
+    options,
+  );
+};
 
 export const getFixedBotsListFixedBotsQueryKey = () => {
-    return [
-    `/api/fixed-bots`
-    ] as const;
-    }
+  return [`/api/fixed-bots`] as const;
+};
 
+export const getFixedBotsListFixedBotsQueryOptions = <
+  TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-export const getFixedBotsListFixedBotsQueryOptions = <TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
+  const queryKey =
+    queryOptions?.queryKey ?? getFixedBotsListFixedBotsQueryKey();
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof fixedBotsListFixedBots>>
+  > = ({ signal }) => fixedBotsListFixedBots(requestOptions, signal);
 
-  const queryKey =  queryOptions?.queryKey ?? getFixedBotsListFixedBotsQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type FixedBotsListFixedBotsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof fixedBotsListFixedBots>>
+>;
+export type FixedBotsListFixedBotsQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof fixedBotsListFixedBots>>> = ({ signal }) => fixedBotsListFixedBots(requestOptions, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type FixedBotsListFixedBotsQueryResult = NonNullable<Awaited<ReturnType<typeof fixedBotsListFixedBots>>>
-export type FixedBotsListFixedBotsQueryError = unknown
-
-
-export function useFixedBotsListFixedBots<TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError, TData>> & Pick<
+export function useFixedBotsListFixedBots<
+  TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
           TError,
           Awaited<ReturnType<typeof fixedBotsListFixedBots>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useFixedBotsListFixedBots<TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useFixedBotsListFixedBots<
+  TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
           TError,
           Awaited<ReturnType<typeof fixedBotsListFixedBots>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useFixedBotsListFixedBots<TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useFixedBotsListFixedBots<
+  TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary List Fixed Bots
  */
 
-export function useFixedBotsListFixedBots<TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fixedBotsListFixedBots>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useFixedBotsListFixedBots<
+  TData = Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof fixedBotsListFixedBots>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getFixedBotsListFixedBotsQueryOptions(options);
 
-  const queryOptions = getFixedBotsListFixedBotsQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

@@ -5,6 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateEmployeeRequestPersonalityAnyOf } from './createEmployeeRequestPersonalityAnyOf';
+import type { CreateEmployeeRequestPersonalityAnyOf } from "./createEmployeeRequestPersonalityAnyOf";
 
-export type CreateEmployeeRequestPersonality = CreateEmployeeRequestPersonalityAnyOf | null;
+export type CreateEmployeeRequestPersonality =
+  CreateEmployeeRequestPersonalityAnyOf | null;

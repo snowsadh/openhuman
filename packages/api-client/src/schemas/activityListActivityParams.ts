@@ -7,43 +7,43 @@
  */
 
 export type ActivityListActivityParams = {
-/**
- * Organization ID
- */
-organization_id: string;
-/**
- * Filter by event types (ai_engine, agent_run, document_upload, employee_created, employee_updated, tool_usage, human_escalation, memory_operation)
- */
-event_types?: string[] | null;
-/**
- * Filter by employee
- */
-employee_id?: string | null;
-/**
- * Filter by bot type
- */
-employee_type?: string | null;
-/**
- * Full-text search across summary/description
- */
-q?: string | null;
-/**
- * Start date (ISO 8601)
- */
-date_from?: string | null;
-/**
- * End date (ISO 8601)
- */
-date_to?: string | null;
-/**
- * Pagination offset
- * @minimum 0
- */
-offset?: number;
-/**
- * Page size (max 100)
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
+  /**
+   * Organization ID
+   */
+  organization_id: string;
+  /**
+   * Filter by event types (ai_engine, agent_run, document_upload, employee_created, employee_updated, tool_usage, human_escalation, memory_operation)
+   */
+  event_types?: string[] | null;
+  /**
+   * Filter by employee
+   */
+  employee_id?: string | null;
+  /**
+   * Filter by bot type
+   */
+  employee_type?: string | null;
+  /**
+   * Full-text search across summary/description
+   */
+  q?: string | null;
+  /**
+   * Start date (ISO 8601)
+   */
+  date_from?: string | null;
+  /**
+   * End date (ISO 8601)
+   */
+  date_to?: string | null;
+  /**
+   * Pagination offset
+   * @minimum 0
+   */
+  offset?: number;
+  /**
+   * Page size (max 100)
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
 };

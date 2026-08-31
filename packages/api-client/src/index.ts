@@ -39,10 +39,7 @@ export {
   authUpdateMe,
 } from "./api/auth/auth";
 
-export type {
-  AuthMeQueryResult,
-  AuthMeQueryError,
-} from "./api/auth/auth";
+export type { AuthMeQueryResult, AuthMeQueryError } from "./api/auth/auth";
 
 // Employees
 export {

@@ -5,11 +5,11 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { UpdateUserRequestName } from './updateUserRequestName';
-import type { UpdateUserRequestEmail } from './updateUserRequestEmail';
-import type { UpdateUserRequestCurrentPassword } from './updateUserRequestCurrentPassword';
-import type { UpdateUserRequestNewPassword } from './updateUserRequestNewPassword';
-import type { UpdateUserRequestOnboardingCompleted } from './updateUserRequestOnboardingCompleted';
+import type { UpdateUserRequestName } from "./updateUserRequestName";
+import type { UpdateUserRequestEmail } from "./updateUserRequestEmail";
+import type { UpdateUserRequestCurrentPassword } from "./updateUserRequestCurrentPassword";
+import type { UpdateUserRequestNewPassword } from "./updateUserRequestNewPassword";
+import type { UpdateUserRequestOnboardingCompleted } from "./updateUserRequestOnboardingCompleted";
 
 export interface UpdateUserRequest {
   name?: UpdateUserRequestName;

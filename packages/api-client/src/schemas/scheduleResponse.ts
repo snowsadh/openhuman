@@ -5,11 +5,11 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ScheduleResponseThreadId } from './scheduleResponseThreadId';
-import type { ScheduleResponseLastRunAt } from './scheduleResponseLastRunAt';
-import type { ScheduleResponseLastRunStatus } from './scheduleResponseLastRunStatus';
-import type { ScheduleResponseLastError } from './scheduleResponseLastError';
-import type { ScheduleResponseUpdatedAt } from './scheduleResponseUpdatedAt';
+import type { ScheduleResponseThreadId } from "./scheduleResponseThreadId";
+import type { ScheduleResponseLastRunAt } from "./scheduleResponseLastRunAt";
+import type { ScheduleResponseLastRunStatus } from "./scheduleResponseLastRunStatus";
+import type { ScheduleResponseLastError } from "./scheduleResponseLastError";
+import type { ScheduleResponseUpdatedAt } from "./scheduleResponseUpdatedAt";
 
 export interface ScheduleResponse {
   id: string;

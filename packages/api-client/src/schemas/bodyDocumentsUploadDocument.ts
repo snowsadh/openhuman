@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { BodyDocumentsUploadDocumentEmployeeId } from './bodyDocumentsUploadDocumentEmployeeId';
+import type { BodyDocumentsUploadDocumentEmployeeId } from "./bodyDocumentsUploadDocumentEmployeeId";
 
 export interface BodyDocumentsUploadDocument {
   file: string;

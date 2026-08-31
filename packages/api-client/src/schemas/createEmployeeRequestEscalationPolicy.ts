@@ -5,6 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateEmployeeRequestEscalationPolicyAnyOf } from './createEmployeeRequestEscalationPolicyAnyOf';
+import type { CreateEmployeeRequestEscalationPolicyAnyOf } from "./createEmployeeRequestEscalationPolicyAnyOf";
 
-export type CreateEmployeeRequestEscalationPolicy = CreateEmployeeRequestEscalationPolicyAnyOf | null;
+export type CreateEmployeeRequestEscalationPolicy =
+  CreateEmployeeRequestEscalationPolicyAnyOf | null;

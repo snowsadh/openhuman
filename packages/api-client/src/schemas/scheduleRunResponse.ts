@@ -5,14 +5,14 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ScheduleRunResponseScheduleId } from './scheduleRunResponseScheduleId';
-import type { ScheduleRunResponseScheduledFor } from './scheduleRunResponseScheduledFor';
-import type { ScheduleRunResponseStartedAt } from './scheduleRunResponseStartedAt';
-import type { ScheduleRunResponseFinishedAt } from './scheduleRunResponseFinishedAt';
-import type { ScheduleRunResponseResultText } from './scheduleRunResponseResultText';
-import type { ScheduleRunResponseError } from './scheduleRunResponseError';
-import type { ScheduleRunResponseDeliveryStatus } from './scheduleRunResponseDeliveryStatus';
-import type { ScheduleRunResponseDeliveryError } from './scheduleRunResponseDeliveryError';
+import type { ScheduleRunResponseScheduleId } from "./scheduleRunResponseScheduleId";
+import type { ScheduleRunResponseScheduledFor } from "./scheduleRunResponseScheduledFor";
+import type { ScheduleRunResponseStartedAt } from "./scheduleRunResponseStartedAt";
+import type { ScheduleRunResponseFinishedAt } from "./scheduleRunResponseFinishedAt";
+import type { ScheduleRunResponseResultText } from "./scheduleRunResponseResultText";
+import type { ScheduleRunResponseError } from "./scheduleRunResponseError";
+import type { ScheduleRunResponseDeliveryStatus } from "./scheduleRunResponseDeliveryStatus";
+import type { ScheduleRunResponseDeliveryError } from "./scheduleRunResponseDeliveryError";
 
 export interface ScheduleRunResponse {
   id: string;

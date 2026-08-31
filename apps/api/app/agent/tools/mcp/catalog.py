@@ -162,7 +162,7 @@ _register_manifest(
     "Search workflows, trigger runs, and build or edit workflows on an n8n instance.",
     "Development",
     "",
-    "pat_bearer",
+    "api_key",
     docs_url="https://docs.n8n.io/build/ways-of-building-workflows/connect-to-n8n-mcp-server/",
     requires_custom_server_url=True,
     request_timeout_seconds=60.0,

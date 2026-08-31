@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ChannelAssignmentResponseChannelName } from './channelAssignmentResponseChannelName';
+import type { ChannelAssignmentResponseChannelName } from "./channelAssignmentResponseChannelName";
 
 export interface ChannelAssignmentResponse {
   id: string;

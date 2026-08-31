@@ -7,20 +7,20 @@
  */
 
 export type McpMcpOauthCallbackParams = {
-/**
- * Temporary OAuth code from the provider
- */
-code: string;
-/**
- * State parameter echoed back by the provider
- */
-state: string;
-/**
- * OAuth error, if the user declined
- */
-error?: string | null;
-/**
- * Human-readable OAuth error description
- */
-error_description?: string | null;
+  /**
+   * Temporary OAuth code from the provider
+   */
+  code: string;
+  /**
+   * State parameter echoed back by the provider
+   */
+  state: string;
+  /**
+   * OAuth error, if the user declined
+   */
+  error?: string | null;
+  /**
+   * Human-readable OAuth error description
+   */
+  error_description?: string | null;
 };

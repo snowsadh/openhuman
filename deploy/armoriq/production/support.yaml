@@ -24,7 +24,7 @@ mcp_servers:
     auth: {type: bearer, token: $ARMORIQ_GMAIL_VALIDATION_TOKEN}
   - id: zendesk
     url: $ARMORIQ_ZENDESK_MCP_URL
-    auth: {type: bearer, token: $ARMORIQ_MCP_BEARER_TOKEN}
+    auth: {type: api_key, api_key: $ARMORIQ_ZENDESK_VALIDATION_CREDENTIAL}
   - id: notion
     url: https://mcp.notion.com/mcp
     auth: {type: bearer, token: $ARMORIQ_NOTION_VALIDATION_TOKEN}

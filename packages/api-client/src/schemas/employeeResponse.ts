@@ -5,23 +5,23 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { EmployeeResponseEmployeeType } from './employeeResponseEmployeeType';
-import type { EmployeeResponseRole } from './employeeResponseRole';
-import type { EmployeeResponsePersonality } from './employeeResponsePersonality';
-import type { EmployeeResponseSpecialization } from './employeeResponseSpecialization';
-import type { EmployeeResponseDuties } from './employeeResponseDuties';
-import type { EmployeeResponseMemoryPolicy } from './employeeResponseMemoryPolicy';
-import type { EmployeeResponseEscalationPolicy } from './employeeResponseEscalationPolicy';
-import type { EmployeeResponseMcpConnections } from './employeeResponseMcpConnections';
-import type { EmployeeResponseSlackTeamName } from './employeeResponseSlackTeamName';
-import type { EmployeeResponseSlackBotUserId } from './employeeResponseSlackBotUserId';
-import type { EmployeeResponseCogneeUserId } from './employeeResponseCogneeUserId';
-import type { EmployeeResponseCogneeDatasetName } from './employeeResponseCogneeDatasetName';
-import type { ChannelAssignmentResponse } from './channelAssignmentResponse';
-import type { EmployeeResponseUpdatedAt } from './employeeResponseUpdatedAt';
-import type { EmployeeResponseCurrentTask } from './employeeResponseCurrentTask';
-import type { EmployeeResponseLastRunAt } from './employeeResponseLastRunAt';
-import type { EmployeeResponseLastError } from './employeeResponseLastError';
+import type { EmployeeResponseEmployeeType } from "./employeeResponseEmployeeType";
+import type { EmployeeResponseRole } from "./employeeResponseRole";
+import type { EmployeeResponsePersonality } from "./employeeResponsePersonality";
+import type { EmployeeResponseSpecialization } from "./employeeResponseSpecialization";
+import type { EmployeeResponseDuties } from "./employeeResponseDuties";
+import type { EmployeeResponseMemoryPolicy } from "./employeeResponseMemoryPolicy";
+import type { EmployeeResponseEscalationPolicy } from "./employeeResponseEscalationPolicy";
+import type { EmployeeResponseMcpConnections } from "./employeeResponseMcpConnections";
+import type { EmployeeResponseSlackTeamName } from "./employeeResponseSlackTeamName";
+import type { EmployeeResponseSlackBotUserId } from "./employeeResponseSlackBotUserId";
+import type { EmployeeResponseCogneeUserId } from "./employeeResponseCogneeUserId";
+import type { EmployeeResponseCogneeDatasetName } from "./employeeResponseCogneeDatasetName";
+import type { ChannelAssignmentResponse } from "./channelAssignmentResponse";
+import type { EmployeeResponseUpdatedAt } from "./employeeResponseUpdatedAt";
+import type { EmployeeResponseCurrentTask } from "./employeeResponseCurrentTask";
+import type { EmployeeResponseLastRunAt } from "./employeeResponseLastRunAt";
+import type { EmployeeResponseLastError } from "./employeeResponseLastError";
 
 export interface EmployeeResponse {
   id: string;

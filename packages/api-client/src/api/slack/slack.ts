@@ -5,9 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -17,21 +15,18 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   HTTPValidationError,
   SlackSlackInstallParams,
-  SlackSlackOauthCallbackParams
-} from '../../schemas';
+  SlackSlackOauthCallbackParams,
+} from "../../schemas";
 
-import { customInstance } from '../../mutator/custom-instance';
-
+import { customInstance } from "../../mutator/custom-instance";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * Redirect the browser to Slack's OAuth authorize page.
@@ -45,94 +40,160 @@ based on the employee's ``employee_type``.
  * @summary Slack Install
  */
 export const slackSlackInstall = (
-    params: SlackSlackInstallParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  params: SlackSlackInstallParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
+  return customInstance<unknown>(
+    { url: `/api/slack/install`, method: "GET", params, signal },
+    options,
+  );
+};
 
-
-      return customInstance<unknown>(
-      {url: `/api/slack/install`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getSlackSlackInstallQueryKey = (params?: SlackSlackInstallParams,) => {
-    return [
-    `/api/slack/install`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-
-export const getSlackSlackInstallQueryOptions = <TData = Awaited<ReturnType<typeof slackSlackInstall>>, TError = HTTPValidationError>(params: SlackSlackInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackInstall>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getSlackSlackInstallQueryKey = (
+  params?: SlackSlackInstallParams,
 ) => {
+  return [`/api/slack/install`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getSlackSlackInstallQueryOptions = <
+  TData = Awaited<ReturnType<typeof slackSlackInstall>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackInstall>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getSlackSlackInstallQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getSlackSlackInstallQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof slackSlackInstall>>
+  > = ({ signal }) => slackSlackInstall(params, requestOptions, signal);
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof slackSlackInstall>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof slackSlackInstall>>> = ({ signal }) => slackSlackInstall(params, requestOptions, signal);
+export type SlackSlackInstallQueryResult = NonNullable<
+  Awaited<ReturnType<typeof slackSlackInstall>>
+>;
+export type SlackSlackInstallQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof slackSlackInstall>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type SlackSlackInstallQueryResult = NonNullable<Awaited<ReturnType<typeof slackSlackInstall>>>
-export type SlackSlackInstallQueryError = HTTPValidationError
-
-
-export function useSlackSlackInstall<TData = Awaited<ReturnType<typeof slackSlackInstall>>, TError = HTTPValidationError>(
- params: SlackSlackInstallParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackInstall>>, TError, TData>> & Pick<
+export function useSlackSlackInstall<
+  TData = Awaited<ReturnType<typeof slackSlackInstall>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackInstallParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackInstall>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof slackSlackInstall>>,
           TError,
           Awaited<ReturnType<typeof slackSlackInstall>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useSlackSlackInstall<TData = Awaited<ReturnType<typeof slackSlackInstall>>, TError = HTTPValidationError>(
- params: SlackSlackInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackInstall>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useSlackSlackInstall<
+  TData = Awaited<ReturnType<typeof slackSlackInstall>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackInstall>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof slackSlackInstall>>,
           TError,
           Awaited<ReturnType<typeof slackSlackInstall>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useSlackSlackInstall<TData = Awaited<ReturnType<typeof slackSlackInstall>>, TError = HTTPValidationError>(
- params: SlackSlackInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackInstall>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useSlackSlackInstall<
+  TData = Awaited<ReturnType<typeof slackSlackInstall>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackInstall>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Slack Install
  */
 
-export function useSlackSlackInstall<TData = Awaited<ReturnType<typeof slackSlackInstall>>, TError = HTTPValidationError>(
- params: SlackSlackInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackInstall>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useSlackSlackInstall<
+  TData = Awaited<ReturnType<typeof slackSlackInstall>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackInstall>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getSlackSlackInstallQueryOptions(params, options);
 
-  const queryOptions = getSlackSlackInstallQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * Handle the OAuth redirect from Slack.
@@ -147,92 +208,157 @@ based on the employee's ``employee_type``.
  * @summary Slack Oauth Callback
  */
 export const slackSlackOauthCallback = (
-    params: SlackSlackOauthCallbackParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  params: SlackSlackOauthCallbackParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
+  return customInstance<unknown>(
+    { url: `/api/slack/oauth/callback`, method: "GET", params, signal },
+    options,
+  );
+};
 
-
-      return customInstance<unknown>(
-      {url: `/api/slack/oauth/callback`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getSlackSlackOauthCallbackQueryKey = (params?: SlackSlackOauthCallbackParams,) => {
-    return [
-    `/api/slack/oauth/callback`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-
-export const getSlackSlackOauthCallbackQueryOptions = <TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError = HTTPValidationError>(params: SlackSlackOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getSlackSlackOauthCallbackQueryKey = (
+  params?: SlackSlackOauthCallbackParams,
 ) => {
+  return [`/api/slack/oauth/callback`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getSlackSlackOauthCallbackQueryOptions = <
+  TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getSlackSlackOauthCallbackQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getSlackSlackOauthCallbackQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof slackSlackOauthCallback>>
+  > = ({ signal }) => slackSlackOauthCallback(params, requestOptions, signal);
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof slackSlackOauthCallback>>> = ({ signal }) => slackSlackOauthCallback(params, requestOptions, signal);
+export type SlackSlackOauthCallbackQueryResult = NonNullable<
+  Awaited<ReturnType<typeof slackSlackOauthCallback>>
+>;
+export type SlackSlackOauthCallbackQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type SlackSlackOauthCallbackQueryResult = NonNullable<Awaited<ReturnType<typeof slackSlackOauthCallback>>>
-export type SlackSlackOauthCallbackQueryError = HTTPValidationError
-
-
-export function useSlackSlackOauthCallback<TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError = HTTPValidationError>(
- params: SlackSlackOauthCallbackParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError, TData>> & Pick<
+export function useSlackSlackOauthCallback<
+  TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackOauthCallbackParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof slackSlackOauthCallback>>,
           TError,
           Awaited<ReturnType<typeof slackSlackOauthCallback>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useSlackSlackOauthCallback<TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError = HTTPValidationError>(
- params: SlackSlackOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useSlackSlackOauthCallback<
+  TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof slackSlackOauthCallback>>,
           TError,
           Awaited<ReturnType<typeof slackSlackOauthCallback>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useSlackSlackOauthCallback<TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError = HTTPValidationError>(
- params: SlackSlackOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useSlackSlackOauthCallback<
+  TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Slack Oauth Callback
  */
 
-export function useSlackSlackOauthCallback<TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError = HTTPValidationError>(
- params: SlackSlackOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof slackSlackOauthCallback>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useSlackSlackOauthCallback<
+  TData = Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: SlackSlackOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof slackSlackOauthCallback>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getSlackSlackOauthCallbackQueryOptions(params, options);
 
-  const queryOptions = getSlackSlackOauthCallbackQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

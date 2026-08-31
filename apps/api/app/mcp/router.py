@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import quote_plus, urlparse
 from uuid import UUID
 
@@ -31,10 +31,12 @@ from app.core.database import async_session_factory, get_db
 from app.core.dependencies import get_current_user
 from app.core.security import decrypt_token, encrypt_token
 from app.employees.models import Employee
+from app.mcp.credential_package import pack_adapter_credential
 from app.mcp.oauth import (
     _decode_oauth_state,
     _frontend_redirect,
     build_authorize_url,
+    discover_oauth_metadata,
     exchange_code,
 )
 from app.mcp.schemas import (
@@ -115,6 +117,58 @@ def _normalize_server_url(server_url: str | None) -> str | None:
         )
 
     return normalized.rstrip("/")
+
+
+def _adapter_connection_values(
+    slug: str,
+    *,
+    credential: str,
+    upstream_url: str | None,
+    account_identifier: str | None,
+) -> tuple[str, str | None]:
+    """Package dynamic upstream details for fixed ArmorIQ relay endpoints."""
+    if slug == "n8n":
+        if not upstream_url or not upstream_url.startswith("https://"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="n8n requires its public HTTPS MCP server URL",
+            )
+        if not settings.n8n_relay_mcp_url:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="The n8n governed relay is not configured",
+            )
+        return (
+            pack_adapter_credential("n8n", server_url=upstream_url, token=credential),
+            settings.n8n_relay_mcp_url,
+        )
+    if slug == "zendesk":
+        host = (urlparse(upstream_url or "").hostname or "").lower()
+        if not upstream_url or not host.endswith(".zendesk.com"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Zendesk requires https://<subdomain>.zendesk.com",
+            )
+        if not account_identifier or "@" not in account_identifier:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Zendesk requires the account administrator email",
+            )
+        if not settings.zendesk_mcp_url:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="The Zendesk governed adapter is not configured",
+            )
+        return (
+            pack_adapter_credential(
+                "zendesk",
+                account_url=upstream_url,
+                email=account_identifier,
+                api_token=credential,
+            ),
+            settings.zendesk_mcp_url,
+        )
+    return credential, upstream_url
 
 
 # -- org/employee-scoped CRUD router -----------------------------------------
@@ -329,9 +383,16 @@ async def create_mcp_connection(
             detail={"slug": slug, "security_issues": security_issues},
         )
 
+    stored_credential, stored_server_url = _adapter_connection_values(
+        slug,
+        credential=data.credential,
+        upstream_url=normalized_server_url,
+        account_identifier=data.account_identifier,
+    )
+
     # Encrypt the credential
     try:
-        encrypted = encrypt_token(data.credential)
+        encrypted = encrypt_token(stored_credential)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -351,7 +412,7 @@ async def create_mcp_connection(
     if existing is not None:
         existing.credentials_enc = encrypted
         existing.auth_type = selected_auth_type
-        existing.server_url = normalized_server_url
+        existing.server_url = stored_server_url
         existing.scopes = data.scopes
         existing.status = "connected"
         existing.verification_status = "unverified"
@@ -359,6 +420,9 @@ async def create_mcp_connection(
         existing.discovered_tool_count = 0
         existing.verification_error = None
         existing.last_verified_at = None
+        existing.oauth_refresh_token_enc = None
+        existing.oauth_expires_at = None
+        existing.oauth_token_url = None
         conn = existing
         is_new = False
     else:
@@ -368,7 +432,7 @@ async def create_mcp_connection(
             connector_slug=slug,
             auth_type=selected_auth_type,
             credentials_enc=encrypted,
-            server_url=normalized_server_url,
+            server_url=stored_server_url,
             scopes=data.scopes,
             status="connected",
             connected_by_user_id=_current_user.id,
@@ -402,7 +466,6 @@ async def create_mcp_connection(
                 "action": "create" if is_new else "update",
                 "connector_slug": slug,
                 "auth_type": selected_auth_type,
-                "server_url": normalized_server_url,
             },
         )
     except Exception:
@@ -444,6 +507,19 @@ async def verify_mcp_connection(
     credential: str | None = None
     manager = MCPClientManager()
     try:
+        if (
+            spec.supports_token_refresh
+            and connection.auth_type == "oauth2"
+            and connection.oauth_refresh_token_enc
+            and connection.oauth_expires_at is not None
+            and connection.oauth_expires_at <= datetime.now(UTC) + timedelta(minutes=5)
+        ):
+            from app.mcp.oauth import refresh_access_token
+
+            refreshed = await refresh_access_token(spec, connection)
+            if not refreshed:
+                raise RuntimeError("OAuth token expired and refresh was rejected; reconnect")
+            await db.commit()
         if connection.credentials_enc:
             credential = decrypt_token(connection.credentials_enc)
         resolved = ResolvedConnection(
@@ -549,8 +625,7 @@ async def delete_mcp_connection(
 ) -> None:
     """Revoke (mark as 'revoked') an employee's MCP connection.
 
-    The row is kept for audit purposes; credentials are not removed but
-    will no longer be resolved.
+    The row is kept for audit purposes while encrypted credentials are erased.
     """
     await _require_owned_employee(db, org_id, emp_id, _current_user)
     conn = await db.scalar(
@@ -569,6 +644,10 @@ async def delete_mcp_connection(
 
     conn.status = "revoked"
     conn.verification_status = "unverified"
+    conn.credentials_enc = None
+    conn.oauth_refresh_token_enc = None
+    conn.oauth_expires_at = None
+    conn.oauth_token_url = None
     await db.commit()
 
     logger.info(
@@ -614,14 +693,6 @@ async def mcp_oauth_install(
     redirect_to: str | None = Query(
         None, description="URL to redirect back to after the OAuth callback"
     ),
-    client_id: str | None = Query(
-        None, description="Override OAuth client_id (for connectors without hardcoded credentials)"
-    ),
-    client_secret: str | None = Query(None, description="Override OAuth client_secret"),
-    authorize_url: str | None = Query(
-        None, description="Override OAuth authorize_url (for connectors without hardcoded URLs)"
-    ),
-    token_url: str | None = Query(None, description="Override OAuth token_url"),
     db: AsyncSession = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> RedirectResponse:
@@ -631,9 +702,9 @@ async def mcp_oauth_install(
     parameter so the callback can associate the tokens with the right
     record — no server-side session needed.
 
-    For connectors that don't have hardcoded OAuth URLs or client credentials
-    (e.g. catalog-only entries like figma, jira, etc.), pass ``client_id``,
-    ``client_secret``, ``authorize_url``, and ``token_url`` as query parameters.
+    OAuth client credentials are resolved only from server-side settings backed
+    by Secrets Manager. Hosted MCP authorization endpoints are discovered from
+    the trusted manifest URL and are never accepted from request parameters.
     """
     # -- Validate connector ---------------------------------------------------
     spec = REGISTRY.get(slug)
@@ -643,33 +714,25 @@ async def mcp_oauth_install(
             detail=f"Unknown connector slug: {slug}",
         )
 
-    # Allow caller to override OAuth URLs (for catalog-only connectors)
-    effective_authorize = authorize_url or spec.authorize_url
-    effective_token = token_url or spec.token_url
+    entry = get_catalog_entry(slug)
+    if entry is None or not entry.is_installable:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Connector '{slug}' is not approved for OAuth installation",
+        )
 
-    if not effective_authorize:
+    metadata = await discover_oauth_metadata(spec)
+    effective_authorize = metadata.get("authorization_endpoint")
+    effective_token = metadata.get("token_endpoint")
+
+    if not effective_authorize or not effective_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Connector '{slug}' does not support OAuth (no authorize_url "
-                "configured in its spec). "
-                "Pass authorize_url and client_id as query params, or use a "
-                "paste-friendly auth method."
-            ),
+            detail=(f"Connector '{slug}' did not advertise complete trusted OAuth metadata"),
         )
 
     # -- Verify the employee exists -------------------------------------------
-    emp = await db.scalar(
-        select(Employee).where(
-            Employee.id == emp_id,
-            Employee.org_id == org_id,
-        )
-    )
-    if emp is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Employee not found.",
-        )
+    emp = await _require_owned_employee(db, org_id, emp_id, _current_user)
 
     # -- Build & redirect -----------------------------------------------------
     try:
@@ -680,8 +743,6 @@ async def mcp_oauth_install(
             redirect_to,
             override_authorize_url=effective_authorize,
             override_token_url=effective_token,
-            override_client_id=client_id,
-            override_client_secret=client_secret,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -788,8 +849,6 @@ async def mcp_oauth_callback(
     code_verifier = payload.get("code_verifier")
     # Pull overrides from state (set by catalog-only OAuth connectors)
     oauth_token_url = payload.get("token_url") or None
-    oauth_client_id = payload.get("client_id_override") or None
-    oauth_client_secret = payload.get("client_secret") or None
 
     # -- 3. Exchange the code for tokens --------------------------------------
     try:
@@ -798,8 +857,6 @@ async def mcp_oauth_callback(
             code,
             code_verifier=code_verifier,
             override_token_url=oauth_token_url,
-            override_client_id=oauth_client_id,
-            override_client_secret=oauth_client_secret,
         )
     except Exception as exc:
         logger.exception("OAuth token exchange failed for %s", connector_slug)
@@ -856,6 +913,12 @@ async def mcp_oauth_callback(
             existing.discovered_tool_count = 0
             existing.verification_error = None
             existing.last_verified_at = None
+            existing.oauth_expires_at = (
+                datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
+                if token_data.get("expires_in")
+                else None
+            )
+            existing.oauth_token_url = oauth_token_url or spec.token_url
         else:
             conn = McpConnection(
                 org_id=UUID(org_id),
@@ -866,6 +929,12 @@ async def mcp_oauth_callback(
                 oauth_refresh_token_enc=encrypted_refresh,
                 scopes=granted_scopes or spec.default_scopes,
                 status="connected",
+                oauth_expires_at=(
+                    datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
+                    if token_data.get("expires_in")
+                    else None
+                ),
+                oauth_token_url=oauth_token_url or spec.token_url,
             )
             session.add(conn)
 
@@ -1000,7 +1069,7 @@ async def install_catalog_entry(
     spec = REGISTRY[slug]
 
     # Determine auth type
-    auth_type = entry.auth_type
+    auth_type = spec.auth_type
 
     # Build the inner McpConnectionCreate from the request
     normalized_server_url = _normalize_server_url(data.server_url) if data.server_url else None
@@ -1019,8 +1088,17 @@ async def install_catalog_entry(
         )
 
     # Pastable credentials (API key, PAT, none)
-    if auth_type in ("api_key", "pat", "pat_bearer", "none"):
-        encrypted = encrypt_token(data.credential) if data.credential else None
+    if auth_type in ("api_key_header", "pat_bearer", "none"):
+        stored_credential: str | None = data.credential
+        stored_server_url = normalized_server_url
+        if data.credential:
+            stored_credential, stored_server_url = _adapter_connection_values(
+                slug,
+                credential=data.credential,
+                upstream_url=normalized_server_url,
+                account_identifier=data.account_identifier,
+            )
+        encrypted = encrypt_token(stored_credential) if stored_credential else None
 
         existing = await db.scalar(
             select(McpConnection).where(
@@ -1033,7 +1111,7 @@ async def install_catalog_entry(
         if existing is not None:
             if encrypted:
                 existing.credentials_enc = encrypted
-            existing.server_url = normalized_server_url
+            existing.server_url = stored_server_url
             existing.status = "connected"
             existing.verification_status = "unverified"
             existing.discovered_tools = None
@@ -1048,7 +1126,7 @@ async def install_catalog_entry(
                 connector_slug=slug,
                 auth_type=auth_type,
                 credentials_enc=encrypted,
-                server_url=normalized_server_url,
+                server_url=stored_server_url,
                 status="connected",
                 connected_by_user_id=_current_user.id,
             )

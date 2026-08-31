@@ -20,7 +20,8 @@ import base64
 import hashlib
 import logging
 import os
-import time
+import re
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 from uuid import UUID
@@ -67,39 +68,83 @@ def _generate_code_challenge(verifier: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _discover_oauth_metadata(spec: ConnectorSpec) -> dict:
-    """Discover OAuth authorization server metadata for *spec*.
+async def discover_oauth_metadata(spec: ConnectorSpec) -> dict:
+    """Resolve hosted-MCP OAuth metadata from trusted connector endpoints."""
+    metadata: dict = {}
+    if spec.authorize_url:
+        metadata["authorization_endpoint"] = spec.authorize_url
+    if spec.token_url:
+        metadata["token_endpoint"] = spec.token_url
+    if metadata.keys() >= {"authorization_endpoint", "token_endpoint"}:
+        return metadata
+    if not spec.base_url:
+        return metadata
 
-    Tries ``{token_url}/.well-known/oauth-authorization-server`` first,
-    then falls back to the spec's configured URLs.
+    base_url = spec.base_url.rstrip("/")
+    protected_urls: list[str] = []
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10) as client:
+            response = await client.get(base_url)
+            challenge = response.headers.get("www-authenticate", "")
+            match = re.search(r'resource_metadata="([^"]+)"', challenge)
+            if match:
+                protected_urls.append(match.group(1))
 
-    Returns a dict with ``authorization_endpoint``, ``token_endpoint``,
-    ``scopes_supported`` (optional), and ``code_challenge_methods_supported``
-    (optional). Falls back to the spec's configured values on any failure.
-    """
-    base = spec.token_url or ""
-    if base:
-        discovery_url = base.rstrip("/oauth/token").rstrip("/token").rstrip("/")
-        discovery_url += "/.well-known/oauth-authorization-server"
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(discovery_url, timeout=10)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    meta: dict = {}
-                    if "authorization_endpoint" in data:
-                        meta["authorization_endpoint"] = data["authorization_endpoint"]
-                    if "token_endpoint" in data:
-                        meta["token_endpoint"] = data["token_endpoint"]
-                    if "scopes_supported" in data:
-                        meta["scopes_supported"] = data["scopes_supported"]
-                    if "code_challenge_methods_supported" in data:
-                        meta["code_challenge_methods_supported"] = data["code_challenge_methods_supported"]
-                    return meta
-        except Exception:
-            logger.debug("OAuth metadata discovery failed for %s", spec.slug)
+            parsed = httpx.URL(base_url)
+            origin = f"{parsed.scheme}://{parsed.host}"
+            if parsed.port:
+                origin += f":{parsed.port}"
+            protected_urls.extend(
+                [
+                    f"{origin}/.well-known/oauth-protected-resource{parsed.path.rstrip('/')}",
+                    f"{base_url}/.well-known/oauth-protected-resource",
+                    f"{origin}/.well-known/oauth-protected-resource",
+                ]
+            )
 
-    return {}
+            authorization_servers: list[str] = []
+            for url in dict.fromkeys(protected_urls):
+                candidate = await client.get(url)
+                if candidate.status_code != 200:
+                    continue
+                payload = candidate.json()
+                authorization_servers.extend(payload.get("authorization_servers", []))
+                for field in ("authorization_endpoint", "token_endpoint"):
+                    if payload.get(field):
+                        metadata[field] = payload[field]
+                break
+
+            for issuer in authorization_servers:
+                issuer = issuer.rstrip("/")
+                issuer_url = httpx.URL(issuer)
+                issuer_origin = f"{issuer_url.scheme}://{issuer_url.host}"
+                if issuer_url.port:
+                    issuer_origin += f":{issuer_url.port}"
+                well_known = [
+                    f"{issuer_origin}/.well-known/oauth-authorization-server"
+                    f"{issuer_url.path.rstrip('/')}",
+                    f"{issuer}/.well-known/oauth-authorization-server",
+                    f"{issuer_origin}/.well-known/openid-configuration",
+                ]
+                for url in dict.fromkeys(well_known):
+                    candidate = await client.get(url)
+                    if candidate.status_code != 200:
+                        continue
+                    payload = candidate.json()
+                    for field in (
+                        "authorization_endpoint",
+                        "token_endpoint",
+                        "scopes_supported",
+                        "code_challenge_methods_supported",
+                    ):
+                        if payload.get(field):
+                            metadata[field] = payload[field]
+                    break
+                if metadata.keys() >= {"authorization_endpoint", "token_endpoint"}:
+                    break
+    except Exception:
+        logger.exception("OAuth metadata discovery failed for trusted MCP %s", spec.slug)
+    return metadata
 
 
 # ---------------------------------------------------------------------------
@@ -114,8 +159,6 @@ def _encode_oauth_state(
     redirect_to: str | None = None,
     code_verifier: str | None = None,
     override_token_url: str | None = None,
-    override_client_secret: str | None = None,
-    override_client_id: str | None = None,
 ) -> str:
     """Create a short-lived signed token for the OAuth ``state`` parameter."""
     extra: dict[str, str] = {"connector_slug": connector_slug}
@@ -123,10 +166,6 @@ def _encode_oauth_state(
         extra["code_verifier"] = code_verifier
     if override_token_url:
         extra["token_url"] = override_token_url
-    if override_client_secret:
-        extra["client_secret"] = override_client_secret
-    if override_client_id:
-        extra["client_id_override"] = override_client_id
     return encode_oauth_state(
         "mcp-oauth-state",
         employee_id=employee_id,
@@ -160,8 +199,6 @@ def build_authorize_url(
     redirect_to: str | None = None,
     override_authorize_url: str | None = None,
     override_token_url: str | None = None,
-    override_client_id: str | None = None,
-    override_client_secret: str | None = None,
 ) -> str:
     """Build the full OAuth2 authorize URL for *spec* with JWT-encoded state
     and PKCE code challenge.
@@ -174,20 +211,14 @@ def build_authorize_url(
     if not effective_authorize:
         raise ValueError(f"Connector '{spec.slug}' has no authorize_url configured.")
 
-    # Resolve client_id: try override, then settings, then fail
-    client_id_val = override_client_id
-    client_secret_val = override_client_secret
-    if not client_id_val:
-        creds = settings.mcp_oauth_credentials.get(spec.slug)
-        if creds and creds["client_id"]:
-            client_id_val = creds["client_id"]
-            client_secret_val = creds.get("client_secret", "")
+    creds = settings.mcp_oauth_credentials.get(spec.slug)
+    client_id_val = creds["client_id"] if creds else ""
 
     if not client_id_val:
         raise ValueError(
             f"OAuth client_id for '{spec.slug}' is not configured. "
             f"Set {spec.slug.upper()}_CLIENT_ID in the environment "
-            "or pass client_id as a query parameter."
+            "in Secrets Manager."
         )
 
     if not settings.mcp_oauth_redirect_uri:
@@ -198,10 +229,12 @@ def build_authorize_url(
     code_challenge = _generate_code_challenge(code_verifier)
 
     state = _encode_oauth_state(
-        employee_id, org_id, spec.slug, redirect_to, code_verifier,
+        employee_id,
+        org_id,
+        spec.slug,
+        redirect_to,
+        code_verifier,
         override_token_url=override_token_url,
-        override_client_secret=client_secret_val if override_client_id else None,
-        override_client_id=override_client_id,
     )
 
     params: dict[str, str] = {
@@ -224,8 +257,6 @@ async def exchange_code(
     code: str,
     code_verifier: str | None = None,
     override_token_url: str | None = None,
-    override_client_id: str | None = None,
-    override_client_secret: str | None = None,
 ) -> dict:
     """Exchange a temporary OAuth2 authorization ``code`` for tokens.
 
@@ -233,9 +264,7 @@ async def exchange_code(
     token request.  Otherwise falls back to the standard client_secret
     flow.
 
-    ``override_*`` parameters let catalog-only OAuth connectors (figma, jira,
-    etc.) participate in the flow by providing credentials at install time
-    rather than having them hardcoded in the env.
+    A discovered token URL may be provided for OAuth 2.1 hosted MCP servers.
 
     Returns the full token-response dict (``access_token``,
     ``refresh_token``, ``expires_in``, ``scope``, …).
@@ -248,18 +277,11 @@ async def exchange_code(
     if not effective_token_url:
         raise ValueError(f"Connector '{spec.slug}' has no token_url configured.")
 
-    # Resolve client_id / client_secret
-    client_id_val = override_client_id
-    client_secret_val = override_client_secret
+    creds = settings.mcp_oauth_credentials.get(spec.slug)
+    client_id_val = creds["client_id"] if creds else ""
+    client_secret_val = creds.get("client_secret", "") if creds else ""
     if not client_id_val:
-        creds = settings.mcp_oauth_credentials.get(spec.slug)
-        if creds and creds["client_id"]:
-            client_id_val = creds["client_id"]
-            client_secret_val = creds.get("client_secret", "")
-    if not client_id_val:
-        raise ValueError(
-            f"OAuth credentials for '{spec.slug}' are not configured."
-        )
+        raise ValueError(f"OAuth credentials for '{spec.slug}' are not configured.")
 
     if not settings.mcp_oauth_redirect_uri:
         raise ValueError("MCP_OAUTH_REDIRECT_URI is not configured.")
@@ -274,13 +296,13 @@ async def exchange_code(
 
     if code_verifier:
         payload["code_verifier"] = code_verifier
-        payload["client_id"] = client_id_val
-    elif spec.token_auth_method == "basic":
+    if spec.token_auth_method == "basic":
         raw = f"{client_id_val}:{client_secret_val or ''}"
         headers["Authorization"] = f"Basic {base64.b64encode(raw.encode()).decode()}"
     else:
         payload["client_id"] = client_id_val
-        payload["client_secret"] = client_secret_val or ""
+        if client_secret_val:
+            payload["client_secret"] = client_secret_val
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -294,8 +316,7 @@ async def exchange_code(
 
     if "access_token" not in data:
         raise ValueError(
-            f"Token response from '{spec.slug}' missing access_token: "
-            f"keys={list(data.keys())}"
+            f"Token response from '{spec.slug}' missing access_token: keys={list(data.keys())}"
         )
 
     return data
@@ -318,7 +339,8 @@ async def refresh_access_token(
         logger.debug("No refresh token stored for connection %s", connection.id)
         return None
 
-    if not spec.token_url:
+    token_url = connection.oauth_token_url or spec.token_url
+    if not token_url:
         logger.warning("Connector '%s' has no token_url for refresh", spec.slug)
         return None
 
@@ -345,7 +367,7 @@ async def refresh_access_token(
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                spec.token_url,
+                token_url,
                 data=refresh_payload,
                 headers=refresh_headers,
                 timeout=30,
@@ -368,10 +390,10 @@ async def refresh_access_token(
     connection.credentials_enc = encrypt_token(new_access_token)
     if "refresh_token" in data:
         connection.oauth_refresh_token_enc = encrypt_token(data["refresh_token"])
+    if expires_in := data.get("expires_in"):
+        connection.oauth_expires_at = datetime.now(UTC) + timedelta(seconds=int(expires_in))
 
-    logger.info(
-        "Refreshed OAuth token for connection %s (%s)", connection.id, spec.slug
-    )
+    logger.info("Refreshed OAuth token for connection %s (%s)", connection.id, spec.slug)
     return new_access_token
 
 

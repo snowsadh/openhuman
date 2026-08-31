@@ -5,9 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -17,23 +15,20 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   ActivityFeedResponse,
   ActivityGetActivityStatsRouteParams,
   ActivityListActivityParams,
   ActivityStatsResponse,
-  HTTPValidationError
-} from '../../schemas';
+  HTTPValidationError,
+} from "../../schemas";
 
-import { customInstance } from '../../mutator/custom-instance';
-
+import { customInstance } from "../../mutator/custom-instance";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * Get a unified activity feed for the organization.
@@ -43,186 +38,321 @@ changes in a single chronological stream.
  * @summary List Activity
  */
 export const activityListActivity = (
-    params: ActivityListActivityParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  params: ActivityListActivityParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
+  return customInstance<ActivityFeedResponse>(
+    { url: `/api/activity`, method: "GET", params, signal },
+    options,
+  );
+};
 
-
-      return customInstance<ActivityFeedResponse>(
-      {url: `/api/activity`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getActivityListActivityQueryKey = (params?: ActivityListActivityParams,) => {
-    return [
-    `/api/activity`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-
-export const getActivityListActivityQueryOptions = <TData = Awaited<ReturnType<typeof activityListActivity>>, TError = HTTPValidationError>(params: ActivityListActivityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityListActivity>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getActivityListActivityQueryKey = (
+  params?: ActivityListActivityParams,
 ) => {
+  return [`/api/activity`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getActivityListActivityQueryOptions = <
+  TData = Awaited<ReturnType<typeof activityListActivity>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityListActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityListActivity>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getActivityListActivityQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getActivityListActivityQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof activityListActivity>>
+  > = ({ signal }) => activityListActivity(params, requestOptions, signal);
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof activityListActivity>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof activityListActivity>>> = ({ signal }) => activityListActivity(params, requestOptions, signal);
+export type ActivityListActivityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof activityListActivity>>
+>;
+export type ActivityListActivityQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof activityListActivity>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type ActivityListActivityQueryResult = NonNullable<Awaited<ReturnType<typeof activityListActivity>>>
-export type ActivityListActivityQueryError = HTTPValidationError
-
-
-export function useActivityListActivity<TData = Awaited<ReturnType<typeof activityListActivity>>, TError = HTTPValidationError>(
- params: ActivityListActivityParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityListActivity>>, TError, TData>> & Pick<
+export function useActivityListActivity<
+  TData = Awaited<ReturnType<typeof activityListActivity>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityListActivityParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityListActivity>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof activityListActivity>>,
           TError,
           Awaited<ReturnType<typeof activityListActivity>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useActivityListActivity<TData = Awaited<ReturnType<typeof activityListActivity>>, TError = HTTPValidationError>(
- params: ActivityListActivityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityListActivity>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useActivityListActivity<
+  TData = Awaited<ReturnType<typeof activityListActivity>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityListActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityListActivity>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof activityListActivity>>,
           TError,
           Awaited<ReturnType<typeof activityListActivity>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useActivityListActivity<TData = Awaited<ReturnType<typeof activityListActivity>>, TError = HTTPValidationError>(
- params: ActivityListActivityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityListActivity>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useActivityListActivity<
+  TData = Awaited<ReturnType<typeof activityListActivity>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityListActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityListActivity>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary List Activity
  */
 
-export function useActivityListActivity<TData = Awaited<ReturnType<typeof activityListActivity>>, TError = HTTPValidationError>(
- params: ActivityListActivityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityListActivity>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useActivityListActivity<
+  TData = Awaited<ReturnType<typeof activityListActivity>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityListActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityListActivity>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getActivityListActivityQueryOptions(params, options);
 
-  const queryOptions = getActivityListActivityQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * Get today's activity statistics grouped by event type.
  * @summary Get Activity Stats Route
  */
 export const activityGetActivityStatsRoute = (
-    params: ActivityGetActivityStatsRouteParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  params: ActivityGetActivityStatsRouteParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
+  return customInstance<ActivityStatsResponse>(
+    { url: `/api/activity/stats`, method: "GET", params, signal },
+    options,
+  );
+};
 
-
-      return customInstance<ActivityStatsResponse>(
-      {url: `/api/activity/stats`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getActivityGetActivityStatsRouteQueryKey = (params?: ActivityGetActivityStatsRouteParams,) => {
-    return [
-    `/api/activity/stats`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-
-export const getActivityGetActivityStatsRouteQueryOptions = <TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError = HTTPValidationError>(params: ActivityGetActivityStatsRouteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getActivityGetActivityStatsRouteQueryKey = (
+  params?: ActivityGetActivityStatsRouteParams,
 ) => {
+  return [`/api/activity/stats`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getActivityGetActivityStatsRouteQueryOptions = <
+  TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityGetActivityStatsRouteParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getActivityGetActivityStatsRouteQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getActivityGetActivityStatsRouteQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof activityGetActivityStatsRoute>>
+  > = ({ signal }) =>
+    activityGetActivityStatsRoute(params, requestOptions, signal);
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>> = ({ signal }) => activityGetActivityStatsRoute(params, requestOptions, signal);
+export type ActivityGetActivityStatsRouteQueryResult = NonNullable<
+  Awaited<ReturnType<typeof activityGetActivityStatsRoute>>
+>;
+export type ActivityGetActivityStatsRouteQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type ActivityGetActivityStatsRouteQueryResult = NonNullable<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>>
-export type ActivityGetActivityStatsRouteQueryError = HTTPValidationError
-
-
-export function useActivityGetActivityStatsRoute<TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError = HTTPValidationError>(
- params: ActivityGetActivityStatsRouteParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError, TData>> & Pick<
+export function useActivityGetActivityStatsRoute<
+  TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityGetActivityStatsRouteParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
           TError,
           Awaited<ReturnType<typeof activityGetActivityStatsRoute>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useActivityGetActivityStatsRoute<TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError = HTTPValidationError>(
- params: ActivityGetActivityStatsRouteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useActivityGetActivityStatsRoute<
+  TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityGetActivityStatsRouteParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
           TError,
           Awaited<ReturnType<typeof activityGetActivityStatsRoute>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useActivityGetActivityStatsRoute<TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError = HTTPValidationError>(
- params: ActivityGetActivityStatsRouteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useActivityGetActivityStatsRoute<
+  TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityGetActivityStatsRouteParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Activity Stats Route
  */
 
-export function useActivityGetActivityStatsRoute<TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError = HTTPValidationError>(
- params: ActivityGetActivityStatsRouteParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof activityGetActivityStatsRoute>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useActivityGetActivityStatsRoute<
+  TData = Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+  TError = HTTPValidationError,
+>(
+  params: ActivityGetActivityStatsRouteParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof activityGetActivityStatsRoute>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getActivityGetActivityStatsRouteQueryOptions(
+    params,
+    options,
+  );
 
-  const queryOptions = getActivityGetActivityStatsRouteQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

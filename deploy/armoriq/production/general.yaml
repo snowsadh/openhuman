@@ -32,7 +32,7 @@ mcp_servers:
     url: https://rival-search-mcp.fly.dev/mcp
   - id: n8n
     url: $ARMORIQ_N8N_RELAY_MCP_URL
-    auth: {type: bearer, token: $ARMORIQ_MCP_BEARER_TOKEN}
+    auth: {type: api_key, api_key: $ARMORIQ_N8N_VALIDATION_CREDENTIAL}
   - id: canva
     url: https://mcp.canva.com/mcp
     auth: {type: bearer, token: $ARMORIQ_CANVA_VALIDATION_TOKEN}

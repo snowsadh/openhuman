@@ -6,4 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateEmployeeRequestEscalationPolicyAnyOf = { [key: string]: unknown };
+export type UpdateEmployeeRequestEscalationPolicyAnyOf = {
+  [key: string]: unknown;
+};

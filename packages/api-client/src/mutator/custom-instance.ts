@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
   status: number;
@@ -40,7 +39,9 @@ export const customInstance = async <T>(
   let queryParams = "";
   if (params) {
     const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      params as Record<string, unknown>,
+    )) {
       if (value !== undefined && value !== null) {
         if (Array.isArray(value)) {
           value.forEach((v) => {
@@ -68,7 +69,7 @@ export const customInstance = async <T>(
 
   if (data instanceof FormData) {
     const keysToDelete = Object.keys(mergedHeaders).filter(
-      (k) => k.toLowerCase() === "content-type"
+      (k) => k.toLowerCase() === "content-type",
     );
     for (const key of keysToDelete) {
       delete mergedHeaders[key];
@@ -80,7 +81,8 @@ export const customInstance = async <T>(
     method,
     signal,
     headers: mergedHeaders,
-    body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
+    body:
+      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
   });
 
   if (response.status === 401 && !url.startsWith("/api/auth/")) {
@@ -90,11 +92,7 @@ export const customInstance = async <T>(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new ApiError(
-      response.status,
-      response.statusText,
-      errorBody,
-    );
+    throw new ApiError(response.status, response.statusText, errorBody);
   }
 
   if (response.status === 204) {

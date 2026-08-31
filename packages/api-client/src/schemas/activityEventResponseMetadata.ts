@@ -5,6 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ActivityEventResponseMetadataAnyOf } from './activityEventResponseMetadataAnyOf';
+import type { ActivityEventResponseMetadataAnyOf } from "./activityEventResponseMetadataAnyOf";
 
-export type ActivityEventResponseMetadata = ActivityEventResponseMetadataAnyOf | null;
+export type ActivityEventResponseMetadata =
+  ActivityEventResponseMetadataAnyOf | null;

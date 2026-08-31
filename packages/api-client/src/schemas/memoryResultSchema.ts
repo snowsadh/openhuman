@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { MemoryResultSchemaScore } from './memoryResultSchemaScore';
+import type { MemoryResultSchemaScore } from "./memoryResultSchemaScore";
 
 export interface MemoryResultSchema {
   text: string;

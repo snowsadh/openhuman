@@ -5,8 +5,8 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ActivityEventResponse } from './activityEventResponse';
-import type { ActivityFeedResponseNextOffset } from './activityFeedResponseNextOffset';
+import type { ActivityEventResponse } from "./activityEventResponse";
+import type { ActivityFeedResponseNextOffset } from "./activityFeedResponseNextOffset";
 
 /**
  * Paginated activity feed.

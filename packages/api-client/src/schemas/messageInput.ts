@@ -5,9 +5,9 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { MessageInputEmployeeName } from './messageInputEmployeeName';
-import type { MessageInputOrgName } from './messageInputOrgName';
-import type { MessageInputSystemPromptTemplate } from './messageInputSystemPromptTemplate';
+import type { MessageInputEmployeeName } from "./messageInputEmployeeName";
+import type { MessageInputOrgName } from "./messageInputOrgName";
+import type { MessageInputSystemPromptTemplate } from "./messageInputSystemPromptTemplate";
 
 /**
  * Payload representing an incoming message from any gateway or tester.

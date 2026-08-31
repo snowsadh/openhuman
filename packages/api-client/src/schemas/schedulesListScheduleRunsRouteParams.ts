@@ -7,5 +7,5 @@
  */
 
 export type SchedulesListScheduleRunsRouteParams = {
-limit?: number;
+  limit?: number;
 };

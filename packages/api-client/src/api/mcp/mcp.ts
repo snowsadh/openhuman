@@ -5,10 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,8 +18,8 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   CatalogInstallRequest,
@@ -33,15 +30,14 @@ import type {
   McpConnectionList,
   McpConnectionRead,
   McpMcpOauthCallbackParams,
-  McpMcpOauthInstallParams
-} from '../../schemas';
+  McpMcpOauthInstallParams,
+  McpVerificationRequest,
+  McpVerificationResponse,
+} from "../../schemas";
 
-import { customInstance } from '../../mutator/custom-instance';
-
+import { customInstance } from "../../mutator/custom-instance";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * Return every connector in the registry with its connection count
@@ -49,193 +45,351 @@ for this organization.
  * @summary List Mcp Connectors
  */
 export const mcpListMcpConnectors = (
-    orgId: string,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  orgId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<ConnectorStatus[]>(
-      {url: `/api/organizations/${orgId}/mcp-connectors`, method: 'GET', signal
+  return customInstance<ConnectorStatus[]>(
+    {
+      url: `/api/organizations/${orgId}/mcp-connectors`,
+      method: "GET",
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getMcpListMcpConnectorsQueryKey = (orgId?: string) => {
+  return [`/api/organizations/${orgId}/mcp-connectors`] as const;
+};
 
-
-
-export const getMcpListMcpConnectorsQueryKey = (orgId?: string,) => {
-    return [
-    `/api/organizations/${orgId}/mcp-connectors`
-    ] as const;
-    }
-
-
-export const getMcpListMcpConnectorsQueryOptions = <TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError = HTTPValidationError>(orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getMcpListMcpConnectorsQueryOptions = <
+  TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
 ) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+  const queryKey =
+    queryOptions?.queryKey ?? getMcpListMcpConnectorsQueryKey(orgId);
 
-  const queryKey =  queryOptions?.queryKey ?? getMcpListMcpConnectorsQueryKey(orgId);
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof mcpListMcpConnectors>>
+  > = ({ signal }) => mcpListMcpConnectors(orgId, requestOptions, signal);
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!orgId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type McpListMcpConnectorsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof mcpListMcpConnectors>>
+>;
+export type McpListMcpConnectorsQueryError = HTTPValidationError;
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mcpListMcpConnectors>>> = ({ signal }) => mcpListMcpConnectors(orgId, requestOptions, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(orgId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type McpListMcpConnectorsQueryResult = NonNullable<Awaited<ReturnType<typeof mcpListMcpConnectors>>>
-export type McpListMcpConnectorsQueryError = HTTPValidationError
-
-
-export function useMcpListMcpConnectors<TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError = HTTPValidationError>(
- orgId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError, TData>> & Pick<
+export function useMcpListMcpConnectors<
+  TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpListMcpConnectors>>,
           TError,
           Awaited<ReturnType<typeof mcpListMcpConnectors>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpListMcpConnectors<TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError = HTTPValidationError>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useMcpListMcpConnectors<
+  TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpListMcpConnectors>>,
           TError,
           Awaited<ReturnType<typeof mcpListMcpConnectors>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpListMcpConnectors<TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError = HTTPValidationError>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useMcpListMcpConnectors<
+  TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary List Mcp Connectors
  */
 
-export function useMcpListMcpConnectors<TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError = HTTPValidationError>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListMcpConnectors>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useMcpListMcpConnectors<
+  TData = Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListMcpConnectors>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getMcpListMcpConnectorsQueryOptions(orgId, options);
 
-  const queryOptions = getMcpListMcpConnectorsQueryOptions(orgId,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * List active MCP connections available to *emp_id* (theirs + org-wide).
  * @summary List Employee Mcp Connections
  */
 export const mcpListEmployeeMcpConnections = (
-    orgId: string,
-    empId: string,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  orgId: string,
+  empId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<McpConnectionList>(
-      {url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections`, method: 'GET', signal
+  return customInstance<McpConnectionList>(
+    {
+      url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections`,
+      method: "GET",
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
-
-
-
-export const getMcpListEmployeeMcpConnectionsQueryKey = (orgId?: string,
-    empId?: string,) => {
-    return [
-    `/api/organizations/${orgId}/employees/${empId}/mcp-connections`
-    ] as const;
-    }
-
-
-export const getMcpListEmployeeMcpConnectionsQueryOptions = <TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError = HTTPValidationError>(orgId: string,
-    empId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getMcpListEmployeeMcpConnectionsQueryKey = (
+  orgId?: string,
+  empId?: string,
 ) => {
+  return [
+    `/api/organizations/${orgId}/employees/${empId}/mcp-connections`,
+  ] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getMcpListEmployeeMcpConnectionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getMcpListEmployeeMcpConnectionsQueryKey(orgId,empId);
+  const queryKey =
+    queryOptions?.queryKey ??
+    getMcpListEmployeeMcpConnectionsQueryKey(orgId, empId);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>
+  > = ({ signal }) =>
+    mcpListEmployeeMcpConnections(orgId, empId, requestOptions, signal);
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(orgId && empId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>> = ({ signal }) => mcpListEmployeeMcpConnections(orgId,empId, requestOptions, signal);
+export type McpListEmployeeMcpConnectionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>
+>;
+export type McpListEmployeeMcpConnectionsQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(orgId && empId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type McpListEmployeeMcpConnectionsQueryResult = NonNullable<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>>
-export type McpListEmployeeMcpConnectionsQueryError = HTTPValidationError
-
-
-export function useMcpListEmployeeMcpConnections<TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError, TData>> & Pick<
+export function useMcpListEmployeeMcpConnections<
+  TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
           TError,
           Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpListEmployeeMcpConnections<TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useMcpListEmployeeMcpConnections<
+  TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
           TError,
           Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpListEmployeeMcpConnections<TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useMcpListEmployeeMcpConnections<
+  TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary List Employee Mcp Connections
  */
 
-export function useMcpListEmployeeMcpConnections<TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useMcpListEmployeeMcpConnections<
+  TData = Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListEmployeeMcpConnections>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getMcpListEmployeeMcpConnectionsQueryOptions(
+    orgId,
+    empId,
+    options,
+  );
 
-  const queryOptions = getMcpListEmployeeMcpConnectionsQueryOptions(orgId,empId,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * Create or update an API-key / PAT MCP connection for *emp_id*.
@@ -244,351 +398,668 @@ The credential is encrypted at rest via AES-256-GCM.
  * @summary Create Mcp Connection
  */
 export const mcpCreateMcpConnection = (
-    orgId: string,
-    empId: string,
-    slug: string,
-    mcpConnectionCreate: McpConnectionCreate,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  orgId: string,
+  empId: string,
+  slug: string,
+  mcpConnectionCreate: McpConnectionCreate,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<McpConnectionRead>(
-      {url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: mcpConnectionCreate, signal
+  return customInstance<McpConnectionRead>(
+    {
+      url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: mcpConnectionCreate,
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getMcpCreateMcpConnectionMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof mcpCreateMcpConnection>>,
+    TError,
+    { orgId: string; empId: string; slug: string; data: McpConnectionCreate },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof mcpCreateMcpConnection>>,
+  TError,
+  { orgId: string; empId: string; slug: string; data: McpConnectionCreate },
+  TContext
+> => {
+  const mutationKey = ["mcpCreateMcpConnection"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof mcpCreateMcpConnection>>,
+    { orgId: string; empId: string; slug: string; data: McpConnectionCreate }
+  > = (props) => {
+    const { orgId, empId, slug, data } = props ?? {};
 
-export const getMcpCreateMcpConnectionMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mcpCreateMcpConnection>>, TError,{orgId: string;empId: string;slug: string;data: McpConnectionCreate}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mcpCreateMcpConnection>>, TError,{orgId: string;empId: string;slug: string;data: McpConnectionCreate}, TContext> => {
+    return mcpCreateMcpConnection(orgId, empId, slug, data, requestOptions);
+  };
 
-const mutationKey = ['mcpCreateMcpConnection'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+  return { mutationFn, ...mutationOptions };
+};
 
+export type McpCreateMcpConnectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof mcpCreateMcpConnection>>
+>;
+export type McpCreateMcpConnectionMutationBody = McpConnectionCreate;
+export type McpCreateMcpConnectionMutationError = HTTPValidationError;
 
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mcpCreateMcpConnection>>, {orgId: string;empId: string;slug: string;data: McpConnectionCreate}> = (props) => {
-          const {orgId,empId,slug,data} = props ?? {};
-
-          return  mcpCreateMcpConnection(orgId,empId,slug,data,requestOptions)
-        }
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type McpCreateMcpConnectionMutationResult = NonNullable<Awaited<ReturnType<typeof mcpCreateMcpConnection>>>
-    export type McpCreateMcpConnectionMutationBody = McpConnectionCreate
-    export type McpCreateMcpConnectionMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Create Mcp Connection
  */
-export const useMcpCreateMcpConnection = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mcpCreateMcpConnection>>, TError,{orgId: string;empId: string;slug: string;data: McpConnectionCreate}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof mcpCreateMcpConnection>>,
-        TError,
-        {orgId: string;empId: string;slug: string;data: McpConnectionCreate},
-        TContext
-      > => {
+export const useMcpCreateMcpConnection = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof mcpCreateMcpConnection>>,
+      TError,
+      { orgId: string; empId: string; slug: string; data: McpConnectionCreate },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof mcpCreateMcpConnection>>,
+  TError,
+  { orgId: string; empId: string; slug: string; data: McpConnectionCreate },
+  TContext
+> => {
+  const mutationOptions = getMcpCreateMcpConnectionMutationOptions(options);
 
-      const mutationOptions = getMcpCreateMcpConnectionMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * Revoke (mark as 'revoked') an employee's MCP connection.
 
-The row is kept for audit purposes; credentials are not removed but
-will no longer be resolved.
+The row is kept for audit purposes while encrypted credentials are erased.
  * @summary Delete Mcp Connection
  */
 export const mcpDeleteMcpConnection = (
-    orgId: string,
-    empId: string,
-    slug: string,
- options?: SecondParameter<typeof customInstance>,) => {
-
-
-      return customInstance<void>(
-      {url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}`, method: 'DELETE'
+  orgId: string,
+  empId: string,
+  slug: string,
+  options?: SecondParameter<typeof customInstance>,
+) => {
+  return customInstance<void>(
+    {
+      url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}`,
+      method: "DELETE",
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getMcpDeleteMcpConnectionMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof mcpDeleteMcpConnection>>,
+    TError,
+    { orgId: string; empId: string; slug: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof mcpDeleteMcpConnection>>,
+  TError,
+  { orgId: string; empId: string; slug: string },
+  TContext
+> => {
+  const mutationKey = ["mcpDeleteMcpConnection"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof mcpDeleteMcpConnection>>,
+    { orgId: string; empId: string; slug: string }
+  > = (props) => {
+    const { orgId, empId, slug } = props ?? {};
 
-export const getMcpDeleteMcpConnectionMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mcpDeleteMcpConnection>>, TError,{orgId: string;empId: string;slug: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mcpDeleteMcpConnection>>, TError,{orgId: string;empId: string;slug: string}, TContext> => {
+    return mcpDeleteMcpConnection(orgId, empId, slug, requestOptions);
+  };
 
-const mutationKey = ['mcpDeleteMcpConnection'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+  return { mutationFn, ...mutationOptions };
+};
 
+export type McpDeleteMcpConnectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof mcpDeleteMcpConnection>>
+>;
 
+export type McpDeleteMcpConnectionMutationError = HTTPValidationError;
 
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mcpDeleteMcpConnection>>, {orgId: string;empId: string;slug: string}> = (props) => {
-          const {orgId,empId,slug} = props ?? {};
-
-          return  mcpDeleteMcpConnection(orgId,empId,slug,requestOptions)
-        }
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type McpDeleteMcpConnectionMutationResult = NonNullable<Awaited<ReturnType<typeof mcpDeleteMcpConnection>>>
-
-    export type McpDeleteMcpConnectionMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Delete Mcp Connection
  */
-export const useMcpDeleteMcpConnection = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mcpDeleteMcpConnection>>, TError,{orgId: string;empId: string;slug: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof mcpDeleteMcpConnection>>,
-        TError,
-        {orgId: string;empId: string;slug: string},
-        TContext
-      > => {
+export const useMcpDeleteMcpConnection = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof mcpDeleteMcpConnection>>,
+      TError,
+      { orgId: string; empId: string; slug: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof mcpDeleteMcpConnection>>,
+  TError,
+  { orgId: string; empId: string; slug: string },
+  TContext
+> => {
+  const mutationOptions = getMcpDeleteMcpConnectionMutationOptions(options);
 
-      const mutationOptions = getMcpDeleteMcpConnectionMutationOptions(options);
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Run tools/list and, when requested, one exact read call through ArmorIQ.
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+Discovery alone produces ``discovered``. A connector becomes ``verified``
+only after the selected tool executes through the signed intent boundary.
+ * @summary Verify Mcp Connection
+ */
+export const mcpVerifyMcpConnection = (
+  orgId: string,
+  empId: string,
+  slug: string,
+  mcpVerificationRequest: McpVerificationRequest,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<McpVerificationResponse>(
+    {
+      url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/verify`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: mcpVerificationRequest,
+      signal,
+    },
+    options,
+  );
+};
+
+export const getMcpVerifyMcpConnectionMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof mcpVerifyMcpConnection>>,
+    TError,
+    {
+      orgId: string;
+      empId: string;
+      slug: string;
+      data: McpVerificationRequest;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof mcpVerifyMcpConnection>>,
+  TError,
+  { orgId: string; empId: string; slug: string; data: McpVerificationRequest },
+  TContext
+> => {
+  const mutationKey = ["mcpVerifyMcpConnection"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof mcpVerifyMcpConnection>>,
+    { orgId: string; empId: string; slug: string; data: McpVerificationRequest }
+  > = (props) => {
+    const { orgId, empId, slug, data } = props ?? {};
+
+    return mcpVerifyMcpConnection(orgId, empId, slug, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type McpVerifyMcpConnectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof mcpVerifyMcpConnection>>
+>;
+export type McpVerifyMcpConnectionMutationBody = McpVerificationRequest;
+export type McpVerifyMcpConnectionMutationError = HTTPValidationError;
+
+/**
+ * @summary Verify Mcp Connection
+ */
+export const useMcpVerifyMcpConnection = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof mcpVerifyMcpConnection>>,
+      TError,
+      {
+        orgId: string;
+        empId: string;
+        slug: string;
+        data: McpVerificationRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof mcpVerifyMcpConnection>>,
+  TError,
+  { orgId: string; empId: string; slug: string; data: McpVerificationRequest },
+  TContext
+> => {
+  const mutationOptions = getMcpVerifyMcpConnectionMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * Redirect the browser to the OAuth provider's authorize page.
 
 The employee / org / connector are baked into a JWT-signed ``state``
 parameter so the callback can associate the tokens with the right
 record — no server-side session needed.
 
-For connectors that don't have hardcoded OAuth URLs or client credentials
-(e.g. catalog-only entries like figma, jira, etc.), pass ``client_id``,
-``client_secret``, ``authorize_url``, and ``token_url`` as query parameters.
+OAuth client credentials are resolved only from server-side settings backed
+by Secrets Manager. Hosted MCP authorization endpoints are discovered from
+the trusted manifest URL and are never accepted from request parameters.
  * @summary Start OAuth install for an MCP connector
  */
 export const mcpMcpOauthInstall = (
-    orgId: string,
-    empId: string,
-    slug: string,
-    params?: McpMcpOauthInstallParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  orgId: string,
+  empId: string,
+  slug: string,
+  params?: McpMcpOauthInstallParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<unknown>(
-      {url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install`, method: 'GET',
-        params, signal
+  return customInstance<unknown>(
+    {
+      url: `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install`,
+      method: "GET",
+      params,
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
-
-
-
-export const getMcpMcpOauthInstallQueryKey = (orgId?: string,
-    empId?: string,
-    slug?: string,
-    params?: McpMcpOauthInstallParams,) => {
-    return [
-    `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-
-export const getMcpMcpOauthInstallQueryOptions = <TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError = HTTPValidationError>(orgId: string,
-    empId: string,
-    slug: string,
-    params?: McpMcpOauthInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getMcpMcpOauthInstallQueryKey = (
+  orgId?: string,
+  empId?: string,
+  slug?: string,
+  params?: McpMcpOauthInstallParams,
 ) => {
+  return [
+    `/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install`,
+    ...(params ? [params] : []),
+  ] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getMcpMcpOauthInstallQueryOptions = <
+  TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  slug: string,
+  params?: McpMcpOauthInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getMcpMcpOauthInstallQueryKey(orgId,empId,slug,params);
+  const queryKey =
+    queryOptions?.queryKey ??
+    getMcpMcpOauthInstallQueryKey(orgId, empId, slug, params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof mcpMcpOauthInstall>>
+  > = ({ signal }) =>
+    mcpMcpOauthInstall(orgId, empId, slug, params, requestOptions, signal);
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(orgId && empId && slug),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mcpMcpOauthInstall>>> = ({ signal }) => mcpMcpOauthInstall(orgId,empId,slug,params, requestOptions, signal);
+export type McpMcpOauthInstallQueryResult = NonNullable<
+  Awaited<ReturnType<typeof mcpMcpOauthInstall>>
+>;
+export type McpMcpOauthInstallQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(orgId && empId && slug), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type McpMcpOauthInstallQueryResult = NonNullable<Awaited<ReturnType<typeof mcpMcpOauthInstall>>>
-export type McpMcpOauthInstallQueryError = HTTPValidationError
-
-
-export function useMcpMcpOauthInstall<TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string,
-    slug: string,
-    params: undefined |  McpMcpOauthInstallParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError, TData>> & Pick<
+export function useMcpMcpOauthInstall<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  slug: string,
+  params: undefined | McpMcpOauthInstallParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
           TError,
           Awaited<ReturnType<typeof mcpMcpOauthInstall>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpMcpOauthInstall<TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string,
-    slug: string,
-    params?: McpMcpOauthInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useMcpMcpOauthInstall<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  slug: string,
+  params?: McpMcpOauthInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
           TError,
           Awaited<ReturnType<typeof mcpMcpOauthInstall>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpMcpOauthInstall<TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string,
-    slug: string,
-    params?: McpMcpOauthInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useMcpMcpOauthInstall<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  slug: string,
+  params?: McpMcpOauthInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Start OAuth install for an MCP connector
  */
 
-export function useMcpMcpOauthInstall<TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError = HTTPValidationError>(
- orgId: string,
-    empId: string,
-    slug: string,
-    params?: McpMcpOauthInstallParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthInstall>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useMcpMcpOauthInstall<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  empId: string,
+  slug: string,
+  params?: McpMcpOauthInstallParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthInstall>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getMcpMcpOauthInstallQueryOptions(
+    orgId,
+    empId,
+    slug,
+    params,
+    options,
+  );
 
-  const queryOptions = getMcpMcpOauthInstallQueryOptions(orgId,empId,slug,params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * Return every catalog entry with its install status for this org.
  * @summary List Catalog Entries
  */
 export const mcpListCatalogEntries = (
-    orgId: string,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  orgId: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
+  return customInstance<CatalogList>(
+    { url: `/api/organizations/${orgId}/mcp-catalog`, method: "GET", signal },
+    options,
+  );
+};
 
+export const getMcpListCatalogEntriesQueryKey = (orgId?: string) => {
+  return [`/api/organizations/${orgId}/mcp-catalog`] as const;
+};
 
-      return customInstance<CatalogList>(
-      {url: `/api/organizations/${orgId}/mcp-catalog`, method: 'GET', signal
-    },
-      options);
-    }
-
-
-
-
-export const getMcpListCatalogEntriesQueryKey = (orgId?: string,) => {
-    return [
-    `/api/organizations/${orgId}/mcp-catalog`
-    ] as const;
-    }
-
-
-export const getMcpListCatalogEntriesQueryOptions = <TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError = HTTPValidationError>(orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getMcpListCatalogEntriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
 ) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+  const queryKey =
+    queryOptions?.queryKey ?? getMcpListCatalogEntriesQueryKey(orgId);
 
-  const queryKey =  queryOptions?.queryKey ?? getMcpListCatalogEntriesQueryKey(orgId);
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof mcpListCatalogEntries>>
+  > = ({ signal }) => mcpListCatalogEntries(orgId, requestOptions, signal);
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!orgId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type McpListCatalogEntriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof mcpListCatalogEntries>>
+>;
+export type McpListCatalogEntriesQueryError = HTTPValidationError;
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mcpListCatalogEntries>>> = ({ signal }) => mcpListCatalogEntries(orgId, requestOptions, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(orgId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type McpListCatalogEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof mcpListCatalogEntries>>>
-export type McpListCatalogEntriesQueryError = HTTPValidationError
-
-
-export function useMcpListCatalogEntries<TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError = HTTPValidationError>(
- orgId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError, TData>> & Pick<
+export function useMcpListCatalogEntries<
+  TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpListCatalogEntries>>,
           TError,
           Awaited<ReturnType<typeof mcpListCatalogEntries>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpListCatalogEntries<TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError = HTTPValidationError>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useMcpListCatalogEntries<
+  TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpListCatalogEntries>>,
           TError,
           Awaited<ReturnType<typeof mcpListCatalogEntries>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpListCatalogEntries<TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError = HTTPValidationError>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useMcpListCatalogEntries<
+  TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary List Catalog Entries
  */
 
-export function useMcpListCatalogEntries<TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError = HTTPValidationError>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpListCatalogEntries>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useMcpListCatalogEntries<
+  TData = Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+  TError = HTTPValidationError,
+>(
+  orgId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpListCatalogEntries>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getMcpListCatalogEntriesQueryOptions(orgId, options);
 
-  const queryOptions = getMcpListCatalogEntriesQueryOptions(orgId,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * Install a catalog MCP entry as a connection for *emp_id*.
@@ -598,70 +1069,102 @@ this auto-generates and registers one on the fly.
  * @summary Install Catalog Entry
  */
 export const mcpInstallCatalogEntry = (
-    orgId: string,
-    empId: string,
-    slug: string,
-    catalogInstallRequest: CatalogInstallRequest,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  orgId: string,
+  empId: string,
+  slug: string,
+  catalogInstallRequest: CatalogInstallRequest,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<McpConnectionRead>(
-      {url: `/api/organizations/${orgId}/employees/${empId}/mcp-catalog/${slug}/install`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: catalogInstallRequest, signal
+  return customInstance<McpConnectionRead>(
+    {
+      url: `/api/organizations/${orgId}/employees/${empId}/mcp-catalog/${slug}/install`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: catalogInstallRequest,
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getMcpInstallCatalogEntryMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof mcpInstallCatalogEntry>>,
+    TError,
+    { orgId: string; empId: string; slug: string; data: CatalogInstallRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof mcpInstallCatalogEntry>>,
+  TError,
+  { orgId: string; empId: string; slug: string; data: CatalogInstallRequest },
+  TContext
+> => {
+  const mutationKey = ["mcpInstallCatalogEntry"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof mcpInstallCatalogEntry>>,
+    { orgId: string; empId: string; slug: string; data: CatalogInstallRequest }
+  > = (props) => {
+    const { orgId, empId, slug, data } = props ?? {};
 
-export const getMcpInstallCatalogEntryMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mcpInstallCatalogEntry>>, TError,{orgId: string;empId: string;slug: string;data: CatalogInstallRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mcpInstallCatalogEntry>>, TError,{orgId: string;empId: string;slug: string;data: CatalogInstallRequest}, TContext> => {
+    return mcpInstallCatalogEntry(orgId, empId, slug, data, requestOptions);
+  };
 
-const mutationKey = ['mcpInstallCatalogEntry'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+  return { mutationFn, ...mutationOptions };
+};
 
+export type McpInstallCatalogEntryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof mcpInstallCatalogEntry>>
+>;
+export type McpInstallCatalogEntryMutationBody = CatalogInstallRequest;
+export type McpInstallCatalogEntryMutationError = HTTPValidationError;
 
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mcpInstallCatalogEntry>>, {orgId: string;empId: string;slug: string;data: CatalogInstallRequest}> = (props) => {
-          const {orgId,empId,slug,data} = props ?? {};
-
-          return  mcpInstallCatalogEntry(orgId,empId,slug,data,requestOptions)
-        }
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type McpInstallCatalogEntryMutationResult = NonNullable<Awaited<ReturnType<typeof mcpInstallCatalogEntry>>>
-    export type McpInstallCatalogEntryMutationBody = CatalogInstallRequest
-    export type McpInstallCatalogEntryMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Install Catalog Entry
  */
-export const useMcpInstallCatalogEntry = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mcpInstallCatalogEntry>>, TError,{orgId: string;empId: string;slug: string;data: CatalogInstallRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof mcpInstallCatalogEntry>>,
-        TError,
-        {orgId: string;empId: string;slug: string;data: CatalogInstallRequest},
-        TContext
-      > => {
+export const useMcpInstallCatalogEntry = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof mcpInstallCatalogEntry>>,
+      TError,
+      {
+        orgId: string;
+        empId: string;
+        slug: string;
+        data: CatalogInstallRequest;
+      },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof mcpInstallCatalogEntry>>,
+  TError,
+  { orgId: string; empId: string; slug: string; data: CatalogInstallRequest },
+  TContext
+> => {
+  const mutationOptions = getMcpInstallCatalogEntryMutationOptions(options);
 
-      const mutationOptions = getMcpInstallCatalogEntryMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * Handle the OAuth redirect from an MCP provider.
 
 1. Validates the state JWT to recover employee / org / connector.
@@ -671,92 +1174,157 @@ export const useMcpInstallCatalogEntry = <TError = HTTPValidationError,
  * @summary OAuth callback for MCP connectors
  */
 export const mcpMcpOauthCallback = (
-    params: McpMcpOauthCallbackParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  params: McpMcpOauthCallbackParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
+  return customInstance<unknown>(
+    { url: `/api/mcp/oauth/callback`, method: "GET", params, signal },
+    options,
+  );
+};
 
-
-      return customInstance<unknown>(
-      {url: `/api/mcp/oauth/callback`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getMcpMcpOauthCallbackQueryKey = (params?: McpMcpOauthCallbackParams,) => {
-    return [
-    `/api/mcp/oauth/callback`, ...(params ? [params]: [])
-    ] as const;
-    }
-
-
-export const getMcpMcpOauthCallbackQueryOptions = <TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError = HTTPValidationError>(params: McpMcpOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getMcpMcpOauthCallbackQueryKey = (
+  params?: McpMcpOauthCallbackParams,
 ) => {
+  return [`/api/mcp/oauth/callback`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getMcpMcpOauthCallbackQueryOptions = <
+  TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: McpMcpOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getMcpMcpOauthCallbackQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getMcpMcpOauthCallbackQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof mcpMcpOauthCallback>>
+  > = ({ signal }) => mcpMcpOauthCallback(params, requestOptions, signal);
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mcpMcpOauthCallback>>> = ({ signal }) => mcpMcpOauthCallback(params, requestOptions, signal);
+export type McpMcpOauthCallbackQueryResult = NonNullable<
+  Awaited<ReturnType<typeof mcpMcpOauthCallback>>
+>;
+export type McpMcpOauthCallbackQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type McpMcpOauthCallbackQueryResult = NonNullable<Awaited<ReturnType<typeof mcpMcpOauthCallback>>>
-export type McpMcpOauthCallbackQueryError = HTTPValidationError
-
-
-export function useMcpMcpOauthCallback<TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError = HTTPValidationError>(
- params: McpMcpOauthCallbackParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError, TData>> & Pick<
+export function useMcpMcpOauthCallback<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: McpMcpOauthCallbackParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
           TError,
           Awaited<ReturnType<typeof mcpMcpOauthCallback>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpMcpOauthCallback<TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError = HTTPValidationError>(
- params: McpMcpOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useMcpMcpOauthCallback<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: McpMcpOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
           TError,
           Awaited<ReturnType<typeof mcpMcpOauthCallback>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useMcpMcpOauthCallback<TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError = HTTPValidationError>(
- params: McpMcpOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useMcpMcpOauthCallback<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: McpMcpOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary OAuth callback for MCP connectors
  */
 
-export function useMcpMcpOauthCallback<TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError = HTTPValidationError>(
- params: McpMcpOauthCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mcpMcpOauthCallback>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useMcpMcpOauthCallback<
+  TData = Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+  TError = HTTPValidationError,
+>(
+  params: McpMcpOauthCallbackParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof mcpMcpOauthCallback>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getMcpMcpOauthCallbackQueryOptions(params, options);
 
-  const queryOptions = getMcpMcpOauthCallbackQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

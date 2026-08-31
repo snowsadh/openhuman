@@ -5,9 +5,9 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { AgentResponseResponse } from './agentResponseResponse';
-import type { FileAttachment } from './fileAttachment';
-import type { AgentResponseError } from './agentResponseError';
+import type { AgentResponseResponse } from "./agentResponseResponse";
+import type { FileAttachment } from "./fileAttachment";
+import type { AgentResponseError } from "./agentResponseError";
 
 /**
  * Payload returned by the agent after compiling a response.

@@ -7,5 +7,5 @@
  */
 
 export type DocumentsGetOrgDocumentsStatsParams = {
-organization_id: string;
+  organization_id: string;
 };

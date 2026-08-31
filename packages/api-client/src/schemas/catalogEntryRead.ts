@@ -18,4 +18,7 @@ export interface CatalogEntryRead {
   docs_url?: string;
   is_hardcoded?: boolean;
   is_installed?: boolean;
+  catalog_state?: string;
+  is_installable?: boolean;
+  verification_status?: string;
 }

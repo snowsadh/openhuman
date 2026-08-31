@@ -7,8 +7,8 @@
  */
 
 export type ActivityGetActivityStatsRouteParams = {
-/**
- * Organization ID
- */
-organization_id: string;
+  /**
+   * Organization ID
+   */
+  organization_id: string;
 };

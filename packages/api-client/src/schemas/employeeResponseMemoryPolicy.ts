@@ -5,6 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { EmployeeResponseMemoryPolicyAnyOf } from './employeeResponseMemoryPolicyAnyOf';
+import type { EmployeeResponseMemoryPolicyAnyOf } from "./employeeResponseMemoryPolicyAnyOf";
 
-export type EmployeeResponseMemoryPolicy = EmployeeResponseMemoryPolicyAnyOf | null;
+export type EmployeeResponseMemoryPolicy =
+  EmployeeResponseMemoryPolicyAnyOf | null;

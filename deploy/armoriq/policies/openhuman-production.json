@@ -70,7 +70,7 @@
       "id": "support-approval",
       "effect": "require_approval",
       "principal": { "type": "agent", "id": "openhuman-support" },
-      "action": { "type": "tool", "in": ["prepare_refund_request", "reply_ticket", "close_ticket", "escalate_ticket", "issue_refund"] },
+      "action": { "type": "tool", "in": ["prepare_refund_request", "reply_ticket", "reply_to_ticket", "close_ticket", "update_ticket_status", "escalate_ticket", "issue_refund"] },
       "resource": { "type": "network", "scope": "registered-mcp" },
       "conditions": []
     },

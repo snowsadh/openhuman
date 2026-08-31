@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -131,6 +132,8 @@ async def _resolve_mcp_tools(
             spec.supports_token_refresh
             and row.auth_type == "oauth2"
             and row.oauth_refresh_token_enc
+            and row.oauth_expires_at is not None
+            and row.oauth_expires_at <= datetime.now(UTC) + timedelta(minutes=5)
         ):
             try:
                 from app.mcp.oauth import refresh_access_token

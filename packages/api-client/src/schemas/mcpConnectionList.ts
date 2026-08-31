@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { McpConnectionRead } from './mcpConnectionRead';
+import type { McpConnectionRead } from "./mcpConnectionRead";
 
 /**
  * Wrapper for listing connections.

@@ -5,9 +5,10 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { McpConnectionCreateAuthType } from './mcpConnectionCreateAuthType';
-import type { McpConnectionCreateServerUrl } from './mcpConnectionCreateServerUrl';
-import type { McpConnectionCreateScopes } from './mcpConnectionCreateScopes';
+import type { McpConnectionCreateAuthType } from "./mcpConnectionCreateAuthType";
+import type { McpConnectionCreateServerUrl } from "./mcpConnectionCreateServerUrl";
+import type { McpConnectionCreateScopes } from "./mcpConnectionCreateScopes";
+import type { McpConnectionCreateAccountIdentifier } from "./mcpConnectionCreateAccountIdentifier";
 
 /**
  * Payload for creating/updating an API-key or PAT MCP connection.
@@ -20,6 +21,8 @@ export interface McpConnectionCreate {
   /** Optional per-connection MCP server URL for connectors that require an org-specific endpoint */
   server_url?: McpConnectionCreateServerUrl;
   scopes?: McpConnectionCreateScopes;
+  /** Provider account identity, such as the Zendesk admin email */
+  account_identifier?: McpConnectionCreateAccountIdentifier;
   /** If True, connection is available to all employees in the org */
   org_wide?: boolean;
 }

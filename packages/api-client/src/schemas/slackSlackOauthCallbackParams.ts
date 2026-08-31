@@ -7,12 +7,12 @@
  */
 
 export type SlackSlackOauthCallbackParams = {
-/**
- * Temporary OAuth code from Slack
- */
-code: string;
-/**
- * State parameter echoed back by Slack
- */
-state: string;
+  /**
+   * Temporary OAuth code from Slack
+   */
+  code: string;
+  /**
+   * State parameter echoed back by Slack
+   */
+  state: string;
 };

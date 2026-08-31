@@ -88,6 +88,9 @@ class McpConnection(Base):
     oauth_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    oauth_token_url: Mapped[str | None] = mapped_column(
+        String(1000), nullable=True, comment="Trusted discovered OAuth token endpoint"
+    )
 
     connected_by_user_id: Mapped[UUID | None] = mapped_column(
         Uuid,

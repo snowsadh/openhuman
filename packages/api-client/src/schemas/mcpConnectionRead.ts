@@ -5,8 +5,12 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { McpConnectionReadScopes } from './mcpConnectionReadScopes';
-import type { McpConnectionReadLastUsedAt } from './mcpConnectionReadLastUsedAt';
+import type { McpConnectionReadScopes } from "./mcpConnectionReadScopes";
+import type { McpConnectionReadDiscoveredTools } from "./mcpConnectionReadDiscoveredTools";
+import type { McpConnectionReadVerificationError } from "./mcpConnectionReadVerificationError";
+import type { McpConnectionReadLastVerifiedAt } from "./mcpConnectionReadLastVerifiedAt";
+import type { McpConnectionReadOauthExpiresAt } from "./mcpConnectionReadOauthExpiresAt";
+import type { McpConnectionReadLastUsedAt } from "./mcpConnectionReadLastUsedAt";
 
 /**
  * Public representation of a stored MCP connection.
@@ -17,6 +21,12 @@ export interface McpConnectionRead {
   auth_type: string;
   scopes?: McpConnectionReadScopes;
   status: string;
+  verification_status?: string;
+  discovered_tools?: McpConnectionReadDiscoveredTools;
+  discovered_tool_count?: number;
+  verification_error?: McpConnectionReadVerificationError;
+  last_verified_at?: McpConnectionReadLastVerifiedAt;
+  oauth_expires_at?: McpConnectionReadOauthExpiresAt;
   is_org_wide?: boolean;
   last_used_at?: McpConnectionReadLastUsedAt;
   created_at: string;

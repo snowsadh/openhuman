@@ -5,28 +5,34 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
-  UseMutationResult
-} from '@tanstack/react-query';
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
+  AgentArmoriqMetricsParams,
+  AgentArmoriqStatus200,
   AgentResponse,
+  ArmorIQMetricsResponse,
   HTTPValidationError,
-  MessageInput
-} from '../../schemas';
+  MessageInput,
+} from "../../schemas";
 
-import { customInstance } from '../../mutator/custom-instance';
-
+import { customInstance } from "../../mutator/custom-instance";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * Execute the authenticated internal AI agent test route.
@@ -37,63 +43,566 @@ in-process.
  * @summary Run Agent
  */
 export const agentRunAgent = (
-    messageInput: MessageInput,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  messageInput: MessageInput,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<AgentResponse>(
-      {url: `/api/agent/run`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: messageInput, signal
+  return customInstance<AgentResponse>(
+    {
+      url: `/api/agent/run`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: messageInput,
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getAgentRunAgentMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof agentRunAgent>>,
+    TError,
+    { data: MessageInput },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof agentRunAgent>>,
+  TError,
+  { data: MessageInput },
+  TContext
+> => {
+  const mutationKey = ["agentRunAgent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof agentRunAgent>>,
+    { data: MessageInput }
+  > = (props) => {
+    const { data } = props ?? {};
 
-export const getAgentRunAgentMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof agentRunAgent>>, TError,{data: MessageInput}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof agentRunAgent>>, TError,{data: MessageInput}, TContext> => {
+    return agentRunAgent(data, requestOptions);
+  };
 
-const mutationKey = ['agentRunAgent'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+  return { mutationFn, ...mutationOptions };
+};
 
+export type AgentRunAgentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof agentRunAgent>>
+>;
+export type AgentRunAgentMutationBody = MessageInput;
+export type AgentRunAgentMutationError = HTTPValidationError;
 
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof agentRunAgent>>, {data: MessageInput}> = (props) => {
-          const {data} = props ?? {};
-
-          return  agentRunAgent(data,requestOptions)
-        }
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AgentRunAgentMutationResult = NonNullable<Awaited<ReturnType<typeof agentRunAgent>>>
-    export type AgentRunAgentMutationBody = MessageInput
-    export type AgentRunAgentMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Run Agent
  */
-export const useAgentRunAgent = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof agentRunAgent>>, TError,{data: MessageInput}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof agentRunAgent>>,
+export const useAgentRunAgent = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof agentRunAgent>>,
+      TError,
+      { data: MessageInput },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof agentRunAgent>>,
+  TError,
+  { data: MessageInput },
+  TContext
+> => {
+  const mutationOptions = getAgentRunAgentMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Expose a secret-free, judge-friendly view of the live governance boundary.
+ * @summary Armoriq Status
+ */
+export const agentArmoriqStatus = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<AgentArmoriqStatus200>(
+    { url: `/api/agent/armoriq/status`, method: "GET", signal },
+    options,
+  );
+};
+
+export const getAgentArmoriqStatusQueryKey = () => {
+  return [`/api/agent/armoriq/status`] as const;
+};
+
+export const getAgentArmoriqStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof agentArmoriqStatus>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof agentArmoriqStatus>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAgentArmoriqStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof agentArmoriqStatus>>
+  > = ({ signal }) => agentArmoriqStatus(requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof agentArmoriqStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
+
+export type AgentArmoriqStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof agentArmoriqStatus>>
+>;
+export type AgentArmoriqStatusQueryError = unknown;
+
+export function useAgentArmoriqStatus<
+  TData = Awaited<ReturnType<typeof agentArmoriqStatus>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqStatus>>,
         TError,
-        {data: MessageInput},
-        TContext
-      > => {
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof agentArmoriqStatus>>,
+          TError,
+          Awaited<ReturnType<typeof agentArmoriqStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useAgentArmoriqStatus<
+  TData = Awaited<ReturnType<typeof agentArmoriqStatus>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqStatus>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof agentArmoriqStatus>>,
+          TError,
+          Awaited<ReturnType<typeof agentArmoriqStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useAgentArmoriqStatus<
+  TData = Awaited<ReturnType<typeof agentArmoriqStatus>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqStatus>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+/**
+ * @summary Armoriq Status
+ */
 
-      const mutationOptions = getAgentRunAgentMutationOptions(options);
+export function useAgentArmoriqStatus<
+  TData = Awaited<ReturnType<typeof agentArmoriqStatus>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqStatus>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getAgentArmoriqStatusQueryOptions(options);
 
-      return useMutation(mutationOptions, queryClient);
-    }
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Serve the authenticated MCP endpoint used only by the ArmorIQ proxy.
+ * @summary Mcp Endpoint
+ */
+export const agentMcpEndpoint = (
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<unknown>(
+    { url: `/api/agent/armoriq/mcp`, method: "POST", signal },
+    options,
+  );
+};
+
+export const getAgentMcpEndpointMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof agentMcpEndpoint>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof agentMcpEndpoint>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["agentMcpEndpoint"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof agentMcpEndpoint>>,
+    void
+  > = () => {
+    return agentMcpEndpoint(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AgentMcpEndpointMutationResult = NonNullable<
+  Awaited<ReturnType<typeof agentMcpEndpoint>>
+>;
+
+export type AgentMcpEndpointMutationError = HTTPValidationError;
+
+/**
+ * @summary Mcp Endpoint
+ */
+export const useAgentMcpEndpoint = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof agentMcpEndpoint>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof agentMcpEndpoint>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions = getAgentMcpEndpointMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Serve one role-specific MCP inventory through the ArmorIQ proxy.
+ * @summary Role Mcp Endpoint
+ */
+export const agentRoleMcpEndpoint = (
+  serverKind: string,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<unknown>(
+    { url: `/api/agent/armoriq/mcp/${serverKind}`, method: "POST", signal },
+    options,
+  );
+};
+
+export const getAgentRoleMcpEndpointMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof agentRoleMcpEndpoint>>,
+    TError,
+    { serverKind: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof agentRoleMcpEndpoint>>,
+  TError,
+  { serverKind: string },
+  TContext
+> => {
+  const mutationKey = ["agentRoleMcpEndpoint"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof agentRoleMcpEndpoint>>,
+    { serverKind: string }
+  > = (props) => {
+    const { serverKind } = props ?? {};
+
+    return agentRoleMcpEndpoint(serverKind, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AgentRoleMcpEndpointMutationResult = NonNullable<
+  Awaited<ReturnType<typeof agentRoleMcpEndpoint>>
+>;
+
+export type AgentRoleMcpEndpointMutationError = HTTPValidationError;
+
+/**
+ * @summary Role Mcp Endpoint
+ */
+export const useAgentRoleMcpEndpoint = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof agentRoleMcpEndpoint>>,
+      TError,
+      { serverKind: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof agentRoleMcpEndpoint>>,
+  TError,
+  { serverKind: string },
+  TContext
+> => {
+  const mutationOptions = getAgentRoleMcpEndpointMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Armoriq Metrics
+ */
+export const agentArmoriqMetrics = (
+  params: AgentArmoriqMetricsParams,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
+) => {
+  return customInstance<ArmorIQMetricsResponse>(
+    { url: `/api/agent/armoriq/metrics`, method: "GET", params, signal },
+    options,
+  );
+};
+
+export const getAgentArmoriqMetricsQueryKey = (
+  params?: AgentArmoriqMetricsParams,
+) => {
+  return [`/api/agent/armoriq/metrics`, ...(params ? [params] : [])] as const;
+};
+
+export const getAgentArmoriqMetricsQueryOptions = <
+  TData = Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+  TError = HTTPValidationError,
+>(
+  params: AgentArmoriqMetricsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAgentArmoriqMetricsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof agentArmoriqMetrics>>
+  > = ({ signal }) => agentArmoriqMetrics(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
+
+export type AgentArmoriqMetricsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof agentArmoriqMetrics>>
+>;
+export type AgentArmoriqMetricsQueryError = HTTPValidationError;
+
+export function useAgentArmoriqMetrics<
+  TData = Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+  TError = HTTPValidationError,
+>(
+  params: AgentArmoriqMetricsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+          TError,
+          Awaited<ReturnType<typeof agentArmoriqMetrics>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useAgentArmoriqMetrics<
+  TData = Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+  TError = HTTPValidationError,
+>(
+  params: AgentArmoriqMetricsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+          TError,
+          Awaited<ReturnType<typeof agentArmoriqMetrics>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useAgentArmoriqMetrics<
+  TData = Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+  TError = HTTPValidationError,
+>(
+  params: AgentArmoriqMetricsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+/**
+ * @summary Armoriq Metrics
+ */
+
+export function useAgentArmoriqMetrics<
+  TData = Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+  TError = HTTPValidationError,
+>(
+  params: AgentArmoriqMetricsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof agentArmoriqMetrics>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getAgentArmoriqMetricsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}

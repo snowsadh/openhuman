@@ -5,158 +5,207 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation
-} from '@tanstack/react-query';
+import { useMutation } from "@tanstack/react-query";
 import type {
   MutationFunction,
   QueryClient,
   UseMutationOptions,
-  UseMutationResult
-} from '@tanstack/react-query';
+  UseMutationResult,
+} from "@tanstack/react-query";
 
 import type {
   HTTPValidationError,
   MemoryIngestRequest,
   MemoryIngestResponse,
   MemorySearchRequest,
-  MemorySearchResponse
-} from '../../schemas';
+  MemorySearchResponse,
+} from "../../schemas";
 
-import { customInstance } from '../../mutator/custom-instance';
-
+import { customInstance } from "../../mutator/custom-instance";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * Search employee personal memory and shared org knowledge.
  * @summary Search
  */
 export const memorySearch = (
-    memorySearchRequest: MemorySearchRequest,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  memorySearchRequest: MemorySearchRequest,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<MemorySearchResponse>(
-      {url: `/api/memory/search`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: memorySearchRequest, signal
+  return customInstance<MemorySearchResponse>(
+    {
+      url: `/api/memory/search`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: memorySearchRequest,
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getMemorySearchMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof memorySearch>>,
+    TError,
+    { data: MemorySearchRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof memorySearch>>,
+  TError,
+  { data: MemorySearchRequest },
+  TContext
+> => {
+  const mutationKey = ["memorySearch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof memorySearch>>,
+    { data: MemorySearchRequest }
+  > = (props) => {
+    const { data } = props ?? {};
 
-export const getMemorySearchMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof memorySearch>>, TError,{data: MemorySearchRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof memorySearch>>, TError,{data: MemorySearchRequest}, TContext> => {
+    return memorySearch(data, requestOptions);
+  };
 
-const mutationKey = ['memorySearch'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+  return { mutationFn, ...mutationOptions };
+};
 
+export type MemorySearchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof memorySearch>>
+>;
+export type MemorySearchMutationBody = MemorySearchRequest;
+export type MemorySearchMutationError = HTTPValidationError;
 
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof memorySearch>>, {data: MemorySearchRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  memorySearch(data,requestOptions)
-        }
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MemorySearchMutationResult = NonNullable<Awaited<ReturnType<typeof memorySearch>>>
-    export type MemorySearchMutationBody = MemorySearchRequest
-    export type MemorySearchMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Search
  */
-export const useMemorySearch = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof memorySearch>>, TError,{data: MemorySearchRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof memorySearch>>,
-        TError,
-        {data: MemorySearchRequest},
-        TContext
-      > => {
+export const useMemorySearch = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof memorySearch>>,
+      TError,
+      { data: MemorySearchRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof memorySearch>>,
+  TError,
+  { data: MemorySearchRequest },
+  TContext
+> => {
+  const mutationOptions = getMemorySearchMutationOptions(options);
 
-      const mutationOptions = getMemorySearchMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * Ingest a fact into the employee's personal memory.
  * @summary Ingest
  */
 export const memoryIngest = (
-    memoryIngestRequest: MemoryIngestRequest,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  memoryIngestRequest: MemoryIngestRequest,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal,
 ) => {
-
-
-      return customInstance<MemoryIngestResponse>(
-      {url: `/api/memory/ingest`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: memoryIngestRequest, signal
+  return customInstance<MemoryIngestResponse>(
+    {
+      url: `/api/memory/ingest`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: memoryIngestRequest,
+      signal,
     },
-      options);
-    }
+    options,
+  );
+};
 
+export const getMemoryIngestMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof memoryIngest>>,
+    TError,
+    { data: MemoryIngestRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof memoryIngest>>,
+  TError,
+  { data: MemoryIngestRequest },
+  TContext
+> => {
+  const mutationKey = ["memoryIngest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof memoryIngest>>,
+    { data: MemoryIngestRequest }
+  > = (props) => {
+    const { data } = props ?? {};
 
-export const getMemoryIngestMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof memoryIngest>>, TError,{data: MemoryIngestRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof memoryIngest>>, TError,{data: MemoryIngestRequest}, TContext> => {
+    return memoryIngest(data, requestOptions);
+  };
 
-const mutationKey = ['memoryIngest'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+  return { mutationFn, ...mutationOptions };
+};
 
+export type MemoryIngestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof memoryIngest>>
+>;
+export type MemoryIngestMutationBody = MemoryIngestRequest;
+export type MemoryIngestMutationError = HTTPValidationError;
 
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof memoryIngest>>, {data: MemoryIngestRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  memoryIngest(data,requestOptions)
-        }
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MemoryIngestMutationResult = NonNullable<Awaited<ReturnType<typeof memoryIngest>>>
-    export type MemoryIngestMutationBody = MemoryIngestRequest
-    export type MemoryIngestMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Ingest
  */
-export const useMemoryIngest = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof memoryIngest>>, TError,{data: MemoryIngestRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof memoryIngest>>,
-        TError,
-        {data: MemoryIngestRequest},
-        TContext
-      > => {
+export const useMemoryIngest = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof memoryIngest>>,
+      TError,
+      { data: MemoryIngestRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof memoryIngest>>,
+  TError,
+  { data: MemoryIngestRequest },
+  TContext
+> => {
+  const mutationOptions = getMemoryIngestMutationOptions(options);
 
-      const mutationOptions = getMemoryIngestMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
+  return useMutation(mutationOptions, queryClient);
+};

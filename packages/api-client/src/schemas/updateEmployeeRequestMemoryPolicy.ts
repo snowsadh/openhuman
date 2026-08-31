@@ -5,6 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { UpdateEmployeeRequestMemoryPolicyAnyOf } from './updateEmployeeRequestMemoryPolicyAnyOf';
+import type { UpdateEmployeeRequestMemoryPolicyAnyOf } from "./updateEmployeeRequestMemoryPolicyAnyOf";
 
-export type UpdateEmployeeRequestMemoryPolicy = UpdateEmployeeRequestMemoryPolicyAnyOf | null;
+export type UpdateEmployeeRequestMemoryPolicy =
+  UpdateEmployeeRequestMemoryPolicyAnyOf | null;

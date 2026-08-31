@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { MemoryResultSchema } from './memoryResultSchema';
+import type { MemoryResultSchema } from "./memoryResultSchema";
 
 export interface MemorySearchResponse {
   results: MemoryResultSchema[];

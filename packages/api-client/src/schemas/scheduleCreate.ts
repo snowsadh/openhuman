@@ -5,7 +5,7 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ScheduleCreateThreadId } from './scheduleCreateThreadId';
+import type { ScheduleCreateThreadId } from "./scheduleCreateThreadId";
 
 export interface ScheduleCreate {
   /**

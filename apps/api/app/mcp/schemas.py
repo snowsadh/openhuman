@@ -61,6 +61,10 @@ class McpConnectionCreate(BaseModel):
         ),
     )
     scopes: list[str] | None = None
+    account_identifier: str | None = Field(
+        default=None,
+        description="Provider account identity, such as the Zendesk admin email",
+    )
     org_wide: bool = Field(
         default=False, description="If True, connection is available to all employees in the org"
     )
@@ -122,4 +126,5 @@ class CatalogInstallRequest(BaseModel):
         description="API key, PAT, or access token for auth_types that need one",
     )
     server_url: str | None = None
+    account_identifier: str | None = None
     org_wide: bool = False

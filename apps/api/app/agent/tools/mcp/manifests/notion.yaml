@@ -11,11 +11,9 @@ auth:
   type: oauth2
   alternative_types:
     - pat_bearer
-  authorize_url: https://api.notion.com/v1/oauth/authorize
-  token_url: https://api.notion.com/v1/oauth/token
   scopes: []
   token_auth_method: basic
-  supports_refresh: false
+  supports_refresh: true
 
 tools:
   default_allow: null

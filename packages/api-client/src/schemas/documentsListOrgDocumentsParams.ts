@@ -7,6 +7,6 @@
  */
 
 export type DocumentsListOrgDocumentsParams = {
-organization_id: string;
-employee_id?: string | null;
+  organization_id: string;
+  employee_id?: string | null;
 };

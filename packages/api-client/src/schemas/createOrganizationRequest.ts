@@ -5,9 +5,9 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateOrganizationRequestDescription } from './createOrganizationRequestDescription';
-import type { CreateOrganizationRequestWhatItDoes } from './createOrganizationRequestWhatItDoes';
-import type { CreateOrganizationRequestWebsiteUrl } from './createOrganizationRequestWebsiteUrl';
+import type { CreateOrganizationRequestDescription } from "./createOrganizationRequestDescription";
+import type { CreateOrganizationRequestWhatItDoes } from "./createOrganizationRequestWhatItDoes";
+import type { CreateOrganizationRequestWebsiteUrl } from "./createOrganizationRequestWebsiteUrl";
 
 export interface CreateOrganizationRequest {
   name: string;

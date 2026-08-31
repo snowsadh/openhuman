@@ -5,14 +5,14 @@
  * OpenHuman — API backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ScheduleUpdateName } from './scheduleUpdateName';
-import type { ScheduleUpdatePrompt } from './scheduleUpdatePrompt';
-import type { ScheduleUpdateCronExpression } from './scheduleUpdateCronExpression';
-import type { ScheduleUpdateTimezone } from './scheduleUpdateTimezone';
-import type { ScheduleUpdatePlatform } from './scheduleUpdatePlatform';
-import type { ScheduleUpdateChannelId } from './scheduleUpdateChannelId';
-import type { ScheduleUpdateThreadId } from './scheduleUpdateThreadId';
-import type { ScheduleUpdateStatus } from './scheduleUpdateStatus';
+import type { ScheduleUpdateName } from "./scheduleUpdateName";
+import type { ScheduleUpdatePrompt } from "./scheduleUpdatePrompt";
+import type { ScheduleUpdateCronExpression } from "./scheduleUpdateCronExpression";
+import type { ScheduleUpdateTimezone } from "./scheduleUpdateTimezone";
+import type { ScheduleUpdatePlatform } from "./scheduleUpdatePlatform";
+import type { ScheduleUpdateChannelId } from "./scheduleUpdateChannelId";
+import type { ScheduleUpdateThreadId } from "./scheduleUpdateThreadId";
+import type { ScheduleUpdateStatus } from "./scheduleUpdateStatus";
 
 export interface ScheduleUpdate {
   name?: ScheduleUpdateName;

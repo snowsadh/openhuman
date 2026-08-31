@@ -65,6 +65,9 @@ interface McpServer {
   tools: string[];
   resources: string[];
   mcpJsonConfig: string;
+  catalogState: string;
+  isInstallable: boolean;
+  verificationStatus: string;
 }
 
 interface CatalogEntry {
@@ -76,6 +79,9 @@ interface CatalogEntry {
   docs_url: string;
   is_hardcoded: boolean;
   is_installed: boolean;
+  catalog_state: string;
+  is_installable: boolean;
+  verification_status: string;
 }
 
 const authTypeMap: Record<string, "OAuth2" | "API Key" | "PAT" | "None"> = {
@@ -344,6 +350,7 @@ export default function McpMarketplacePage() {
   const [credentialServer, setCredentialServer] = useState<McpServer | null>(null);
   const [credentialValue, setCredentialValue] = useState("");
   const [credentialServerUrl, setCredentialServerUrl] = useState("");
+  const [credentialAccountIdentifier, setCredentialAccountIdentifier] = useState("");
 
   const orgId = useOrgStore((s) => s.orgId);
 
@@ -413,6 +420,7 @@ export default function McpMarketplacePage() {
         setCredentialServer(server);
         setCredentialValue("");
         setCredentialServerUrl("");
+        setCredentialAccountIdentifier("");
         return;
       }
     }
@@ -464,6 +472,10 @@ export default function McpMarketplacePage() {
       toast.error("Please enter the MCP server URL.");
       return;
     }
+    if (credentialServer.id === "zendesk" && !credentialAccountIdentifier.includes("@")) {
+      toast.error("Please enter the Zendesk administrator email.");
+      return;
+    }
 
     setConnectingSlugs((prev) => new Set(prev).add(credentialServer.id));
     try {
@@ -475,15 +487,17 @@ export default function McpMarketplacePage() {
           credential: credentialValue.trim(),
           auth_type: selectedAuthType,
           server_url: requiresCustomServerUrl ? credentialServerUrl.trim() : undefined,
+          account_identifier: credentialServer.id === "zendesk" ? credentialAccountIdentifier.trim() : undefined,
           scopes: [],
           org_wide: false,
         },
       });
       await invalidate();
-      toast.success(`Successfully installed and authorized ${credentialServer.name}!`);
+      toast.success(`${credentialServer.name} credentials saved. Verify a read action before use.`);
       setCredentialServer(null);
       setCredentialValue("");
       setCredentialServerUrl("");
+      setCredentialAccountIdentifier("");
     } catch (err: unknown) {
       toast.error(`Failed to connect ${credentialServer.name}. ${getErrorMessage(err)}`);
     } finally {
@@ -493,7 +507,7 @@ export default function McpMarketplacePage() {
         return next;
       });
     }
-  }, [orgId, empId, credentialServer, credentialValue, credentialServerUrl, connectors, createMutation, invalidate]);
+  }, [orgId, empId, credentialServer, credentialValue, credentialServerUrl, credentialAccountIdentifier, connectors, createMutation, invalidate]);
 
   const servers = useMemo((): McpServer[] => {
     if (!catalog?.entries) return [];
@@ -514,6 +528,9 @@ export default function McpMarketplacePage() {
         tools: meta?.tools ?? [],
         resources: meta?.resources ?? [],
         mcpJsonConfig: meta?.mcpJsonConfig ?? `{\n  "mcpServers": {\n    "${entry.slug}": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-${entry.slug}"]\n    }\n  }\n}`,
+        catalogState: entry.catalog_state,
+        isInstallable: entry.is_installable,
+        verificationStatus: entry.verification_status,
       };
     });
   }, [catalog]);
@@ -673,9 +690,9 @@ export default function McpMarketplacePage() {
                   <Button
                     size="sm"
                     variant={isInstalled ? "outline" : "default"}
-                    disabled={isLoading || !empId}
+                    disabled={isLoading || !empId || !server.isInstallable}
                     onClick={(e) => handleInstallToggle(e, server)}
-                    title={!empId ? "Create an AI employee before connecting MCP tools" : undefined}
+                    title={!server.isInstallable ? "This connector is not yet verified" : !empId ? "Create an AI employee before connecting MCP tools" : undefined}
                     className={`h-7 px-3 text-[10px] font-bold transition-all rounded-md shrink-0 flex items-center gap-1 ${
                       isInstalled
                         ? "border-emerald-500/20 text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/10"
@@ -687,6 +704,8 @@ export default function McpMarketplacePage() {
                         <Loader2 className="size-3 animate-spin" />
                         {isInstalled ? "Revoking..." : "Connecting..."}
                       </>
+                    ) : !server.isInstallable ? (
+                      <>Unavailable</>
                     ) : isInstalled ? (
                       <>
                         <CheckCircle className="size-3.5 fill-current" />
@@ -717,7 +736,7 @@ export default function McpMarketplacePage() {
         </div>
       )}
 
-      <Dialog open={credentialServer !== null} onOpenChange={(open) => { if (!open) { setCredentialServer(null); setCredentialValue(""); setCredentialServerUrl(""); } }}>
+      <Dialog open={credentialServer !== null} onOpenChange={(open) => { if (!open) { setCredentialServer(null); setCredentialValue(""); setCredentialServerUrl(""); setCredentialAccountIdentifier(""); } }}>
         {credentialServer ? (
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -731,12 +750,25 @@ export default function McpMarketplacePage() {
             <div className="flex flex-col gap-4 py-4">
               {connectors?.find((c) => c.slug === credentialServer.id)?.requires_custom_server_url ? (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium">MCP Server URL</span>
+                  <span className="text-sm font-medium">
+                    {credentialServer.id === "zendesk" ? "Zendesk account URL" : "MCP Server URL"}
+                  </span>
                   <Input
                     type="url"
-                    placeholder="https://your-n8n-instance.com/mcp-server/http"
+                    placeholder={credentialServer.id === "zendesk" ? "https://your-company.zendesk.com" : "https://your-n8n-instance.com/mcp-server/http"}
                     value={credentialServerUrl}
                     onChange={(e) => setCredentialServerUrl(e.target.value)}
+                  />
+                </div>
+              ) : null}
+              {credentialServer.id === "zendesk" ? (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium">Zendesk administrator email</span>
+                  <Input
+                    type="email"
+                    placeholder="admin@company.com"
+                    value={credentialAccountIdentifier}
+                    onChange={(e) => setCredentialAccountIdentifier(e.target.value)}
                   />
                 </div>
               ) : null}
@@ -744,14 +776,14 @@ export default function McpMarketplacePage() {
                 <span className="text-sm font-medium">Credential</span>
                 <Input
                   type="password"
-                  placeholder={credentialServer.id === "n8n" ? "n8n_pat_..." : "Enter token…"}
+                  placeholder={credentialServer.id === "n8n" ? "n8n_pat_..." : credentialServer.id === "zendesk" ? "Zendesk API token" : "Enter token…"}
                   value={credentialValue}
                   onChange={(e) => setCredentialValue(e.target.value)}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => { setCredentialServer(null); setCredentialValue(""); setCredentialServerUrl(""); }}>
+              <Button variant="ghost" onClick={() => { setCredentialServer(null); setCredentialValue(""); setCredentialServerUrl(""); setCredentialAccountIdentifier(""); }}>
                 Cancel
               </Button>
               <Button onClick={handleCredentialConnect} disabled={credentialServer ? connectingSlugs.has(credentialServer.id) : false}>
@@ -867,8 +899,8 @@ export default function McpMarketplacePage() {
                 </Button>
                 <Button
                   size="sm"
-                  disabled={connectingSlugs.has(selectedServer.id) || !empId}
-                  title={!empId ? "Create an AI employee before connecting MCP tools" : undefined}
+                  disabled={connectingSlugs.has(selectedServer.id) || !empId || !selectedServer.isInstallable}
+                  title={!selectedServer.isInstallable ? "This connector is unavailable" : !empId ? "Create an AI employee before connecting MCP tools" : undefined}
                   onClick={(e) => {
                     handleInstallToggle(e, selectedServer);
                     setSelectedServer(null);
@@ -879,6 +911,8 @@ export default function McpMarketplacePage() {
                 >
                   {connectingSlugs.has(selectedServer.id) ? (
                     <><Loader2 className="size-3 animate-spin mr-1" />Working...</>
+                  ) : !selectedServer.isInstallable ? (
+                    "Unavailable"
                   ) : connectedSlugs.has(selectedServer.id) ? (
                     "Disconnect"
                   ) : (

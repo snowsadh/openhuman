@@ -7,7 +7,7 @@ transport:
   type: streamable_http
 
 auth:
-  type: pat_bearer
+  type: api_key_header
   supports_refresh: false
 
 tools:

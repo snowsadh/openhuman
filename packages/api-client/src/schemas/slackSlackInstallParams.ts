@@ -7,16 +7,16 @@
  */
 
 export type SlackSlackInstallParams = {
-/**
- * Employee UUID
- */
-employee_id: string;
-/**
- * Organization UUID
- */
-org_id: string;
-/**
- * URL to redirect back to after callback
- */
-redirect_to?: string | null;
+  /**
+   * Employee UUID
+   */
+  employee_id: string;
+  /**
+   * Organization UUID
+   */
+  org_id: string;
+  /**
+   * URL to redirect back to after callback
+   */
+  redirect_to?: string | null;
 };
