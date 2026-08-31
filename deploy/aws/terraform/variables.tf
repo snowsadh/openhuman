@@ -95,3 +95,21 @@ variable "github_branch" {
   type        = string
   default     = "main"
 }
+
+variable "github_owner_id" {
+  description = "Immutable GitHub repository-owner ID used in OIDC subjects."
+  type        = string
+  default     = "131667499"
+}
+
+variable "github_repository_id" {
+  description = "Immutable GitHub repository ID used in OIDC subjects."
+  type        = string
+  default     = "1342741294"
+}
+
+variable "github_environment" {
+  description = "GitHub Actions environment allowed to deploy production."
+  type        = string
+  default     = "production"
+}
