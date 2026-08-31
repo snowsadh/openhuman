@@ -107,13 +107,22 @@ resource "aws_iam_role_policy" "github_deploy" {
       },
       {
         Effect   = "Allow"
-        Action   = ["autoscaling:StartInstanceRefresh", "autoscaling:DescribeInstanceRefreshes"]
+        Action   = ["autoscaling:StartInstanceRefresh"]
         Resource = aws_autoscaling_group.app.arn
       },
       {
         Effect   = "Allow"
-        Action   = ["ec2:CreateLaunchTemplateVersion", "ec2:DescribeLaunchTemplateVersions"]
+        Action   = ["ec2:CreateLaunchTemplateVersion"]
         Resource = aws_launch_template.app.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeInstanceRefreshes",
+          "ec2:DescribeLaunchTemplateVersions"
+        ]
+        Resource = "*"
       }
     ]
   })

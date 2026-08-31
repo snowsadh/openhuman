@@ -107,7 +107,9 @@ resource "aws_cloudfront_distribution" "app" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
-    minimum_protocol_version       = "TLSv1.2_2021"
+    # CloudFront reports TLSv1 for its managed *.cloudfront.net certificate;
+    # stricter minimums are available once an ACM-backed custom alias is used.
+    minimum_protocol_version = "TLSv1"
   }
 }
 

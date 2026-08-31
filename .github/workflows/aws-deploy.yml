@@ -1,0 +1,76 @@
+name: Deploy OpenHuman to AWS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "apps/web/**"
+      - "packages/**"
+      - "deploy/aws/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/aws-deploy.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: openhuman-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: ap-south-1
+      AWS_ACCOUNT_ID: "651592873730"
+      API_REPOSITORY: openhuman/api
+      WEB_REPOSITORY: openhuman/web
+      LAUNCH_TEMPLATE_ID: lt-045ca66500b815e10
+      AUTO_SCALING_GROUP: openhuman-prod
+      HEALTH_URL: https://d2pkjr3bs2hemz.cloudfront.net/api/health
+      PUBLIC_URL: https://d2pkjr3bs2hemz.cloudfront.net
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::651592873730:role/openhuman-prod-github-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push immutable API image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.API_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha,scope=openhuman-api
+          cache-to: type=gha,mode=max,scope=openhuman-api
+
+      - name: Build and push immutable web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WEB_REPOSITORY }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ env.PUBLIC_URL }}
+            OPENHUMAN_API_ORIGIN=${{ env.PUBLIC_URL }}
+          cache-from: type=gha,scope=openhuman-web
+          cache-to: type=gha,mode=max,scope=openhuman-web
+
+      - name: Create pinned launch revision and roll out
+        env:
+          API_IMAGE: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.API_REPOSITORY }}:${{ github.sha }}
+          WEB_IMAGE: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WEB_REPOSITORY }}:${{ github.sha }}
+        run: bash deploy/aws/scripts/release.sh
