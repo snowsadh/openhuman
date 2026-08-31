@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec > >(tee -a /var/log/openhuman-bootstrap.log) 2>&1
+
+AWS_REGION='${aws_region}'
+RUNTIME_SECRET_ARN='${runtime_secret_arn}'
+DATABASE_SECRET_ARN='${database_secret_arn}'
+
+dnf install -y docker jq amazon-cloudwatch-agent
+systemctl enable --now docker
+
+install -d -m 0755 /usr/local/lib/docker/cli-plugins /opt/openhuman
+curl -fsSL https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-x86_64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod 0755 /usr/local/lib/docker/cli-plugins/docker-compose
+
+aws ecr get-login-password --region "$AWS_REGION" | \
+  docker login --username AWS --password-stdin "${ecr_registry}"
+
+aws secretsmanager get-secret-value --region "$AWS_REGION" --secret-id "$RUNTIME_SECRET_ARN" \
+  --query SecretString --output text > /run/openhuman-runtime.json
+aws secretsmanager get-secret-value --region "$AWS_REGION" --secret-id "$DATABASE_SECRET_ARN" \
+  --query SecretString --output text > /run/openhuman-database.json
+
+DB_USER="$(jq -r .username /run/openhuman-database.json)"
+DB_PASSWORD="$(jq -r .password /run/openhuman-database.json)"
+DB_PASSWORD_ESCAPED="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$DB_PASSWORD")"
+
+jq -r 'to_entries[] | "\(.key)=\(.value | tostring)"' /run/openhuman-runtime.json > /opt/openhuman/.env
+cat >> /opt/openhuman/.env <<EOF
+AWS_REGION=${aws_region}
+API_IMAGE=${api_image}
+WEB_IMAGE=${web_image}
+DATABASE_URL=postgresql+asyncpg://$DB_USER:$DB_PASSWORD_ESCAPED@${database_host}:${database_port}/${database_name}
+CHECKPOINT_DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD_ESCAPED@${database_host}:${database_port}/${database_name}
+STORAGE_BACKEND=s3
+S3_BUCKET_NAME=${upload_bucket}
+S3_REGION=${aws_region}
+FRONTEND_URL=${public_url}
+NEXT_PUBLIC_API_URL=${public_url}
+OPENHUMAN_API_ORIGIN=${public_url}
+MCP_OAUTH_REDIRECT_URI=${public_url}/api/mcp/oauth/callback
+ARMORIQ_MCP_PUBLIC_URL=${public_url}/api/agent/armoriq/mcp
+CORS_ORIGINS=["${public_url}"]
+ENVIRONMENT=production
+GATEWAY_ENABLED=true
+OPENHUMAN_API_MODULE=app.main:app
+CLOUDWATCH_LOG_GROUP=${log_group}
+EOF
+chmod 0600 /opt/openhuman/.env
+rm -f /run/openhuman-runtime.json /run/openhuman-database.json
+
+echo '${compose_b64}' | base64 -d > /opt/openhuman/docker-compose.yml
+
+docker run --rm --env-file /opt/openhuman/.env "${api_image}" alembic upgrade head
+docker compose --env-file /opt/openhuman/.env -f /opt/openhuman/docker-compose.yml up -d
+docker image prune -f
+
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'
+{
+  "agent": {"metrics_collection_interval": 60},
+  "metrics": {
+    "append_dimensions": {"InstanceId": "$${aws:InstanceId}"},
+    "metrics_collected": {
+      "disk": {"measurement": ["used_percent"], "resources": ["/"]},
+      "mem": {"measurement": ["mem_used_percent"]}
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [{
+          "file_path": "/var/log/openhuman-bootstrap.log",
+          "log_group_name": "${log_group}",
+          "log_stream_name": "{instance_id}/bootstrap"
+        }]
+      }
+    }
+  }
+}
+EOF
+systemctl enable amazon-cloudwatch-agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json

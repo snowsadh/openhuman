@@ -43,3 +43,11 @@ dist/
 
 # Runtime data
 cognee_data/
+
+# Terraform local state and variable values
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan

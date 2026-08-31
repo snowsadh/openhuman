@@ -1,0 +1,2 @@
+api_image = "651592873730.dkr.ecr.ap-south-1.amazonaws.com/openhuman/api:GIT_SHA"
+web_image = "651592873730.dkr.ecr.ap-south-1.amazonaws.com/openhuman/web:GIT_SHA"

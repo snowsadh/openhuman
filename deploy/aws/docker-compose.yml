@@ -1,39 +1,13 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: openhuman
-      POSTGRES_USER: openhuman
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openhuman -d openhuman"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
   api:
-    build:
-      context: ../..
-      dockerfile: apps/api/Dockerfile
-    env_file: ../../.env
+    image: ${API_IMAGE}
+    env_file: ${OPENHUMAN_ENV_FILE:-.env}
     environment:
-      DATABASE_URL: postgresql+asyncpg://openhuman:${POSTGRES_PASSWORD}@postgres:5432/openhuman
-      CHECKPOINT_DATABASE_URL: postgresql://openhuman:${POSTGRES_PASSWORD}@postgres:5432/openhuman
       COGNEE_DATA_DIR: /app/cognee_data
-      STORAGE_BACKEND: s3
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
-      S3_REGION: ${AWS_REGION}
-      FRONTEND_URL: https://${PUBLIC_HOST}
-      MCP_OAUTH_REDIRECT_URI: https://${PUBLIC_HOST}/api/mcp/oauth/callback
-      CORS_ORIGINS: '["https://${PUBLIC_HOST}"]'
-      ENVIRONMENT: production
-      GATEWAY_ENABLED: ${GATEWAY_ENABLED:-false}
-    depends_on:
-      postgres:
-        condition: service_healthy
+      GATEWAY_ENABLED: "true"
+      OPENHUMAN_API_MODULE: app.main:app
+    ports:
+      - "8000:8000"
     volumes:
       - cognee_data:/app/cognee_data
     healthcheck:
@@ -43,38 +17,28 @@ services:
       retries: 20
       start_period: 60s
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-stream-prefix: api
 
   web:
-    build:
-      context: ../..
-      dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: https://${PUBLIC_HOST}
-        OPENHUMAN_API_ORIGIN: https://${PUBLIC_HOST}
+    image: ${WEB_IMAGE}
+    env_file: ${OPENHUMAN_ENV_FILE:-.env}
+    ports:
+      - "3000:3000"
     depends_on:
       api:
         condition: service_healthy
     restart: unless-stopped
-
-  caddy:
-    image: caddy:2-alpine
-    environment:
-      PUBLIC_HOST: ${PUBLIC_HOST}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - web
-      - api
-    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-stream-prefix: web
 
 volumes:
-  postgres_data:
   cognee_data:
-  caddy_data:
-  caddy_config:

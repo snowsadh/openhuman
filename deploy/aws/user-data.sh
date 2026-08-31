@@ -3,7 +3,7 @@ set -euo pipefail
 
 export AWS_REGION=ap-south-1
 export DEPLOYMENT_BUCKET=openhuman-prod-651592873730-ap-south-1
-export ARTIFACT_KEY=releases/27a4e1b-aws1.tar.gz
+export ARTIFACT_KEY=releases/119f236-aws2.tar.gz
 export RUNTIME_SECRET_ID=openhuman/prod/runtime
 
 aws s3 cp \
