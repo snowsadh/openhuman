@@ -9,6 +9,7 @@ resource "aws_lb" "app" {
   security_groups            = [aws_security_group.alb.id]
   subnets                    = values(aws_subnet.public)[*].id
   drop_invalid_header_fields = true
+  depends_on                 = [aws_internet_gateway.main]
 }
 
 resource "aws_lb_target_group" "api" {
@@ -86,7 +87,7 @@ resource "aws_cloudfront_distribution" "app" {
     viewer_protocol_policy   = "redirect-to-https"
     allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods           = ["GET", "HEAD"]
-    cache_policy_id          = "413f1606-25c8-4b69-b7a9-2b2e0371be43"
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3"
   }
 
@@ -96,7 +97,7 @@ resource "aws_cloudfront_distribution" "app" {
     viewer_protocol_policy   = "redirect-to-https"
     allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods           = ["GET", "HEAD"]
-    cache_policy_id          = "413f1606-25c8-4b69-b7a9-2b2e0371be43"
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     origin_request_policy_id = "216adef6-5c7f-47e4-b989-5492eafa07d3"
   }
 
@@ -104,7 +105,10 @@ resource "aws_cloudfront_distribution" "app" {
     geo_restriction { restriction_type = "none" }
   }
 
-  viewer_certificate { cloudfront_default_certificate = true }
+  viewer_certificate {
+    cloudfront_default_certificate = true
+    minimum_protocol_version       = "TLSv1.2_2021"
+  }
 }
 
 locals {
