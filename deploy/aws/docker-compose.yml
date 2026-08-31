@@ -22,7 +22,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${CLOUDWATCH_LOG_GROUP}
-        awslogs-stream-prefix: api
+        awslogs-stream: api
 
   web:
     image: ${WEB_IMAGE}
@@ -38,7 +38,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: ${CLOUDWATCH_LOG_GROUP}
-        awslogs-stream-prefix: web
+        awslogs-stream: web
 
 volumes:
   cognee_data:
