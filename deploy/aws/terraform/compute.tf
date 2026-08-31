@@ -134,6 +134,7 @@ locals {
 
 resource "aws_launch_template" "app" {
   name_prefix   = "${var.project_name}-${var.environment}-"
+  description   = "Managed by OpenHuman release automation"
   image_id      = data.aws_ssm_parameter.al2023.value
   instance_type = var.instance_type
   user_data     = base64encode(local.user_data)

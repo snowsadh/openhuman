@@ -44,7 +44,7 @@ new_version="$(
     --region "$AWS_REGION" \
     --launch-template-id "$LAUNCH_TEMPLATE_ID" \
     --source-version "$source_version" \
-    --version-description "OpenHuman ${GITHUB_SHA:-manual}" \
+    --version-description "Managed by OpenHuman release automation" \
     --launch-template-data "$launch_template_data" \
     --query 'LaunchTemplateVersion.VersionNumber' \
     --output text
