@@ -39,6 +39,7 @@ import {
   useMcpListEmployeeMcpConnections,
   useMcpCreateMcpConnection,
   useMcpDeleteMcpConnection,
+  useMcpVerifyMcpConnection,
   getMcpListEmployeeMcpConnectionsQueryKey,
 } from "@repo/api-client";
 import type { UpdateEmployeeRequest } from "@repo/api-client";
@@ -104,6 +105,24 @@ function formatSize(bytes: number | null | undefined): string {
   );
   const size = bytes / 1024 ** i;
   return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function chooseReadProbe(tools: unknown): {
+  tool?: string;
+  parameters: Record<string, unknown>;
+} {
+  if (!Array.isArray(tools)) return { parameters: {} };
+  const names = tools.filter(
+    (tool): tool is string => typeof tool === "string",
+  );
+  const tool =
+    names.find((name) => /(^|[_-])list([_-]|$)/i.test(name)) ??
+    names.find((name) => /(^|[_-])search([_-]|$)/i.test(name)) ??
+    names.find((name) => /(^|[_-])read([_-]|$)/i.test(name));
+  return {
+    tool,
+    parameters: tool && /search/i.test(tool) ? { query: "OpenHuman" } : {},
+  };
 }
 
 async function downloadDocument(
@@ -182,14 +201,20 @@ export default function EmployeeDetailPage() {
   useEffect(() => {
     if (typeof window !== "undefined" && empId) {
       setLocalDiscordConnected(
-        localStorage.getItem(`openhuman_discord_connected_${empId}`) === "true"
+        localStorage.getItem(`openhuman_discord_connected_${empId}`) === "true",
       );
       setLocalClickupConnected(
-        localStorage.getItem(`openhuman_clickup_connected_${empId}`) === "true"
+        localStorage.getItem(`openhuman_clickup_connected_${empId}`) === "true",
       );
-      setDiscordToken(localStorage.getItem(`openhuman_discord_token_${empId}`) || "");
-      setDiscordClientId(localStorage.getItem(`openhuman_discord_client_id_${empId}`) || "");
-      setClickupToken(localStorage.getItem(`openhuman_clickup_token_${empId}`) || "");
+      setDiscordToken(
+        localStorage.getItem(`openhuman_discord_token_${empId}`) || "",
+      );
+      setDiscordClientId(
+        localStorage.getItem(`openhuman_discord_client_id_${empId}`) || "",
+      );
+      setClickupToken(
+        localStorage.getItem(`openhuman_clickup_token_${empId}`) || "",
+      );
     }
   }, [empId]);
 
@@ -202,7 +227,10 @@ export default function EmployeeDetailPage() {
     localStorage.setItem(`openhuman_discord_connected_${empId}`, "true");
     localStorage.setItem(`openhuman_discord_token_${empId}`, discordToken);
     if (discordClientId.trim()) {
-      localStorage.setItem(`openhuman_discord_client_id_${empId}`, discordClientId);
+      localStorage.setItem(
+        `openhuman_discord_client_id_${empId}`,
+        discordClientId,
+      );
     }
     setLocalDiscordConnected(true);
     setShowDiscordDialog(false);
@@ -242,21 +270,24 @@ export default function EmployeeDetailPage() {
     toast.success("ClickUp workspace disconnected.");
   }, [empId]);
 
-  const handleConnectMcpOAuth = useCallback(async (slug: string) => {
-    try {
-      const token = await getToken();
-      if (!token) {
-        toast.error("Failed to retrieve auth token. Please sign in again.");
-        return;
+  const handleConnectMcpOAuth = useCallback(
+    async (slug: string) => {
+      try {
+        const token = await getToken();
+        if (!token) {
+          toast.error("Failed to retrieve auth token. Please sign in again.");
+          return;
+        }
+        const url = `${API_URL}/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install?token=${encodeURIComponent(token)}&redirect_to=${encodeURIComponent(
+          window.location.origin + window.location.pathname,
+        )}`;
+        window.location.href = url;
+      } catch (err) {
+        toast.error("Connection failed");
       }
-      const url = `${API_URL}/api/organizations/${orgId}/employees/${empId}/mcp-connections/${slug}/install?token=${encodeURIComponent(token)}&redirect_to=${encodeURIComponent(
-        window.location.origin + window.location.pathname
-      )}`;
-      window.location.href = url;
-    } catch (err) {
-      toast.error("Connection failed");
-    }
-  }, [orgId, empId, getToken]);
+    },
+    [orgId, empId, getToken],
+  );
 
   const {
     data: apiEmployee,
@@ -277,7 +308,9 @@ export default function EmployeeDetailPage() {
         specialization: apiEmployee.specialization ?? "",
         duties: (apiEmployee.duties ?? []) as string[],
         status: apiEmployee.status,
-        operationalStatus: apiEmployee.operational_status ?? (apiEmployee.status === "active" ? "idle" : "offline"),
+        operationalStatus:
+          apiEmployee.operational_status ??
+          (apiEmployee.status === "active" ? "idle" : "offline"),
         currentTask: apiEmployee.current_task ?? null,
         lastError: apiEmployee.last_error ?? null,
         hasDiscord: apiEmployee.has_discord_token || localDiscordConnected,
@@ -335,7 +368,9 @@ export default function EmployeeDetailPage() {
     const mcpOauth = searchParams.get("mcp_oauth");
     const connector = searchParams.get("connector");
     if (mcpOauth === "connected") {
-      toast.success(`${connector === "gmail" ? "Gmail" : connector || "MCP"} connected successfully!`);
+      toast.success(
+        `${connector === "gmail" ? "Gmail" : connector || "MCP"} connected successfully!`,
+      );
       if (orgId && empId) {
         queryClient.invalidateQueries({
           queryKey: getMcpListEmployeeMcpConnectionsQueryKey(orgId, empId),
@@ -390,19 +425,46 @@ export default function EmployeeDetailPage() {
     { query: { enabled: !!(orgId && empId) } },
   );
 
-  const {
-    data: connectors,
-    isLoading: connectorsLoading,
-  } = useMcpListMcpConnectors(orgId ?? "", { query: { enabled: !!orgId } });
+  const { data: connectors, isLoading: connectorsLoading } =
+    useMcpListMcpConnectors(orgId ?? "", { query: { enabled: !!orgId } });
 
   const {
     data: mcpConnectionsData,
     isLoading: mcpConnectionsLoading,
     refetch: refetchMcpConnections,
-  } = useMcpListEmployeeMcpConnections(orgId ?? "", empId, { query: { enabled: !!(orgId && empId) } });
+  } = useMcpListEmployeeMcpConnections(orgId ?? "", empId, {
+    query: { enabled: !!(orgId && empId) },
+  });
 
   const deleteMcpConnectionMutation = useMcpDeleteMcpConnection();
   const createMcpConnectionMutation = useMcpCreateMcpConnection();
+  const verifyMcpConnectionMutation = useMcpVerifyMcpConnection();
+
+  const handleVerifyMcp = useCallback(
+    async (slug: string, discoveredTools: unknown) => {
+      if (!orgId || !empId) return;
+      const probe = chooseReadProbe(discoveredTools);
+      try {
+        const result = await verifyMcpConnectionMutation.mutateAsync({
+          orgId,
+          empId,
+          slug,
+          data: { probe_tool: probe.tool, probe_parameters: probe.parameters },
+        });
+        await refetchMcpConnections();
+        toast.success(
+          result.probe_executed
+            ? `${slug} passed its governed read probe.`
+            : `${slug} discovered ${result.discovered_tools.length} tools. Verify again to run the read probe.`,
+        );
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Unknown verification error";
+        toast.error(`${slug} verification failed: ${message}`);
+      }
+    },
+    [orgId, empId, verifyMcpConnectionMutation, refetchMcpConnections],
+  );
 
   const handleConnectMcpToken = useCallback(async () => {
     if (!orgId || !empId || !mcpTokenSlug) return;
@@ -413,8 +475,11 @@ export default function EmployeeDetailPage() {
 
     const connInfo = connectors?.find((c) => c.slug === mcpTokenSlug);
     const authTypes = connInfo?.auth_types ?? [connInfo?.auth_type ?? ""];
-    const selectedAuthType = authTypes.find((t) => t === "pat_bearer" || t === "api_key_header") ?? undefined;
-    const requiresCustomServerUrl = connInfo?.requires_custom_server_url === true;
+    const selectedAuthType =
+      authTypes.find((t) => t === "pat_bearer" || t === "api_key_header") ??
+      undefined;
+    const requiresCustomServerUrl =
+      connInfo?.requires_custom_server_url === true;
 
     if (requiresCustomServerUrl && !mcpServerUrl.trim()) {
       toast.error("Please enter the MCP server URL");
@@ -437,28 +502,44 @@ export default function EmployeeDetailPage() {
       setMcpTokenValue("");
       setMcpTokenSlug("");
       setMcpServerUrl("");
-      toast.success(`${mcpTokenSlug === "notion" ? "Notion" : mcpTokenSlug} connected successfully!`);
+      toast.success(
+        `${mcpTokenSlug === "notion" ? "Notion" : mcpTokenSlug} connected successfully!`,
+      );
       refetchMcpConnections();
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || `Failed to connect ${mcpTokenSlug}`);
+      toast.error(
+        err?.response?.data?.detail || `Failed to connect ${mcpTokenSlug}`,
+      );
     }
-  }, [orgId, empId, mcpTokenSlug, mcpTokenValue, mcpServerUrl, connectors, createMcpConnectionMutation, refetchMcpConnections]);
+  }, [
+    orgId,
+    empId,
+    mcpTokenSlug,
+    mcpTokenValue,
+    mcpServerUrl,
+    connectors,
+    createMcpConnectionMutation,
+    refetchMcpConnections,
+  ]);
 
-  const handleConnectNoAuth = useCallback(async (slug: string) => {
-    if (!orgId || !empId) return;
-    try {
-      await createMcpConnectionMutation.mutateAsync({
-        orgId,
-        empId,
-        slug,
-        data: { credential: "", org_wide: false },
-      });
-      toast.success(`${slug} connected successfully!`);
-      refetchMcpConnections();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || `Failed to connect ${slug}`);
-    }
-  }, [orgId, empId, createMcpConnectionMutation, refetchMcpConnections]);
+  const handleConnectNoAuth = useCallback(
+    async (slug: string) => {
+      if (!orgId || !empId) return;
+      try {
+        await createMcpConnectionMutation.mutateAsync({
+          orgId,
+          empId,
+          slug,
+          data: { credential: "", org_wide: false },
+        });
+        toast.success(`${slug} connected successfully!`);
+        refetchMcpConnections();
+      } catch (err: any) {
+        toast.error(err?.response?.data?.detail || `Failed to connect ${slug}`);
+      }
+    },
+    [orgId, empId, createMcpConnectionMutation, refetchMcpConnections],
+  );
 
   const handleDisconnectMcp = useCallback(
     async (slug: string) => {
@@ -469,7 +550,9 @@ export default function EmployeeDetailPage() {
           empId,
           slug,
         });
-        toast.success(`${slug === "gmail" ? "Gmail" : slug} disconnected successfully!`);
+        toast.success(
+          `${slug === "gmail" ? "Gmail" : slug} disconnected successfully!`,
+        );
         queryClient.invalidateQueries({
           queryKey: getMcpListEmployeeMcpConnectionsQueryKey(orgId, empId),
         });
@@ -477,7 +560,7 @@ export default function EmployeeDetailPage() {
         toast.error(`Failed to disconnect ${slug}.`);
       }
     },
-    [orgId, empId, deleteMcpConnectionMutation, queryClient]
+    [orgId, empId, deleteMcpConnectionMutation, queryClient],
   );
 
   const invalidateDocs = useCallback(() => {
@@ -580,7 +663,9 @@ export default function EmployeeDetailPage() {
 
         if (!response.ok) {
           if (response.status === 404) {
-            throw new Error("No knowledge graph is available for this agent yet.");
+            throw new Error(
+              "No knowledge graph is available for this agent yet.",
+            );
           }
           throw new Error("Failed to load knowledge graph.");
         }
@@ -593,7 +678,9 @@ export default function EmployeeDetailPage() {
         if (!cancelled) {
           setGraphHtml(null);
           setGraphError(
-            err instanceof Error ? err.message : "Failed to load knowledge graph.",
+            err instanceof Error
+              ? err.message
+              : "Failed to load knowledge graph.",
           );
         }
       } finally {
@@ -797,8 +884,12 @@ export default function EmployeeDetailPage() {
               value={employee.specialization || "—"}
             />
             <InfoRow label="Status" value={statusConfig.label} />
-            {employee.currentTask && <InfoRow label="Current task" value={employee.currentTask} />}
-            {employee.lastError && <InfoRow label="Last error" value={employee.lastError} />}
+            {employee.currentTask && (
+              <InfoRow label="Current task" value={employee.currentTask} />
+            )}
+            {employee.lastError && (
+              <InfoRow label="Last error" value={employee.lastError} />
+            )}
             <InfoRow
               label="Deployed"
               value={new Date(employee.deployedAt).toLocaleDateString()}
@@ -909,7 +1000,8 @@ export default function EmployeeDetailPage() {
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">
-                          Install Slack app so {employee.name} can respond to @mentions.
+                          Install Slack app so {employee.name} can respond to
+                          @mentions.
                         </span>
                       )}
                     </div>
@@ -1099,11 +1191,13 @@ export default function EmployeeDetailPage() {
             orgId={orgId ?? ""}
             employeeId={empId}
             duties={employee.duties}
-            assignments={(apiEmployee?.channel_assignments ?? []).map((assignment) => ({
-              platform: assignment.platform,
-              channel_id: assignment.channel_id,
-              channel_name: assignment.channel_name,
-            }))}
+            assignments={(apiEmployee?.channel_assignments ?? []).map(
+              (assignment) => ({
+                platform: assignment.platform,
+                channel_id: assignment.channel_id,
+                channel_name: assignment.channel_name,
+              }),
+            )}
             employeeStatus={employee.status}
           />
 
@@ -1115,97 +1209,94 @@ export default function EmployeeDetailPage() {
               </h3>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {/* Gmail Connection Row */}
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-background p-2">
-                    <BrandLogo slug="gmail" className="size-full" />
+              {mcpConnectionsLoading ? (
+                <Skeleton className="h-16 w-full" />
+              ) : mcpConnectionsData?.connections?.length ? (
+                mcpConnectionsData.connections.map((connection) => (
+                  <div
+                    key={connection.id}
+                    className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-background p-2">
+                        <BrandLogo
+                          slug={connection.connector_slug}
+                          className="size-full"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium capitalize text-foreground">
+                            {connection.connector_slug.replaceAll("-", " ")}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px]",
+                              connection.verification_status === "verified"
+                                ? "border-emerald-500/30 text-emerald-600"
+                                : connection.verification_status === "error"
+                                  ? "border-destructive/30 text-destructive"
+                                  : "border-amber-500/30 text-amber-600",
+                            )}
+                          >
+                            {connection.verification_status ?? "unverified"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {connection.verification_error
+                            ? connection.verification_error
+                            : `${connection.discovered_tool_count ?? 0} tools discovered${
+                                connection.last_verified_at
+                                  ? ` · checked ${new Date(connection.last_verified_at).toLocaleString()}`
+                                  : " · not checked yet"
+                              }`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      {connection.verification_status !== "verified" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleVerifyMcp(
+                              connection.connector_slug,
+                              connection.discovered_tools,
+                            )
+                          }
+                          disabled={verifyMcpConnectionMutation.isPending}
+                        >
+                          {verifyMcpConnectionMutation.isPending
+                            ? "Checking…"
+                            : "Verify"}
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() =>
+                          handleDisconnectMcp(connection.connector_slug)
+                        }
+                        disabled={deleteMcpConnectionMutation.isPending}
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-foreground">
-                      Gmail / Google Workspace
-                    </span>
-                    {mcpConnectionsData?.connections?.some(
-                      (c) => c.connector_slug === "gmail" && c.status === "connected"
-                    ) ? (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        Connected
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Let {employee.name} send, draft, and read emails.
-                      </span>
-                    )}
-                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
+                  No MCP is connected to {employee.name}. Add only role-relevant
+                  tools from the marketplace.
                 </div>
-                {mcpConnectionsData?.connections?.some(
-                  (c) => c.connector_slug === "gmail" && c.status === "connected"
-                ) ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-                    onClick={() => handleDisconnectMcp("gmail")}
-                    disabled={deleteMcpConnectionMutation.isPending}
-                  >
-                    Disconnect
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleConnectMcpOAuth("gmail")}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                  >
-                    <ExternalLinkIcon className="size-3.5" />
-                    Connect
-                  </Button>
-                )}
-              </div>
-
-              {/* Gamma Connection Row */}
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-background p-2">
-                    <BrandLogo slug="gamma" className="size-full" />
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-foreground">
-                      Gamma Presentations
-                    </span>
-                    {mcpConnectionsData?.connections?.some(
-                      (c) => c.connector_slug === "gamma" && c.status === "connected"
-                    ) ? (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        Connected
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Let {employee.name} generate presentations, documents, and web pages.
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {mcpConnectionsData?.connections?.some(
-                  (c) => c.connector_slug === "gamma" && c.status === "connected"
-                ) ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
-                    onClick={() => handleDisconnectMcp("gamma")}
-                    disabled={deleteMcpConnectionMutation.isPending}
-                  >
-                    Disconnect
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleConnectMcpOAuth("gamma")}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                  >
-                    <ExternalLinkIcon className="size-3.5" />
-                    Connect
-                  </Button>
-                )}
-              </div>
+              )}
+              <Link href="/mcp-marketplace" className="self-start">
+                <Button variant="outline" size="sm">
+                  Manage MCP connections
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -1378,7 +1469,8 @@ export default function EmployeeDetailPage() {
           </Link>
         </div>
         <p className="text-xs text-muted-foreground -mt-2">
-          Connect Model Context Protocol (MCP) data sources and server tools to extend the capabilities of {employee.name}.
+          Connect Model Context Protocol (MCP) data sources and server tools to
+          extend the capabilities of {employee.name}.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
@@ -1386,12 +1478,14 @@ export default function EmployeeDetailPage() {
             {
               slug: "gmail",
               name: "Gmail / Google Workspace",
-              description: "Let the agent draft, search, and send email messages.",
+              description:
+                "Let the agent draft, search, and send email messages.",
             },
             {
               slug: "github",
               name: "GitHub Copilot",
-              description: "Access repos, create PRs, search code, and update issues.",
+              description:
+                "Access repos, create PRs, search code, and update issues.",
             },
             {
               slug: "notion",
@@ -1411,7 +1505,8 @@ export default function EmployeeDetailPage() {
             {
               slug: "n8n",
               name: "n8n Workflows",
-              description: "Trigger, inspect, and build workflows on your n8n MCP-enabled instance.",
+              description:
+                "Trigger, inspect, and build workflows on your n8n MCP-enabled instance.",
             },
             {
               slug: "web_search",
@@ -1421,34 +1516,43 @@ export default function EmployeeDetailPage() {
             {
               slug: "visualization",
               name: "Visualization Charts",
-              description: "Create scatter plots, 3D graphs, histograms, heatmaps, line charts, and network diagrams — no API key required.",
+              description:
+                "Create scatter plots, 3D graphs, histograms, heatmaps, line charts, and network diagrams — no API key required.",
             },
             {
               slug: "canva",
               name: "Canva",
-              description: "Generate and export pitch decks and designs — free on every Canva plan.",
+              description:
+                "Generate and export pitch decks and designs — free on every Canva plan.",
             },
             {
               slug: "pitchdeck",
               name: "Pitch Deck Generator",
-              description: "Generate styled .pptx pitch decks instantly — free, no API key, no signup.",
+              description:
+                "Generate styled .pptx pitch decks instantly — free, no API key, no signup.",
             },
             {
               slug: "slack",
               name: "Slack",
-              description: "Install the Slack app so this agent can respond to @mentions and DMs.",
+              description:
+                "Install the Slack app so this agent can respond to @mentions and DMs.",
             },
           ].map((item) => {
             const isSlack = item.slug === "slack";
             const isConnected = isSlack
               ? Boolean(employee.hasSlack)
               : mcpConnectionsData?.connections?.some(
-                  (c) => c.connector_slug === item.slug && c.status === "connected"
+                  (c) =>
+                    c.connector_slug === item.slug && c.status === "connected",
                 );
 
             const connInfo = connectors?.find((c) => c.slug === item.slug);
-            const authTypes = connInfo?.auth_types ?? [connInfo?.auth_type ?? ""];
-            const supportsPaste = authTypes.some((t) => t === "pat_bearer" || t === "api_key_header");
+            const authTypes = connInfo?.auth_types ?? [
+              connInfo?.auth_type ?? "",
+            ];
+            const supportsPaste = authTypes.some(
+              (t) => t === "pat_bearer" || t === "api_key_header",
+            );
             const isNoneAuth = connInfo?.auth_type === "none";
 
             return (
@@ -1471,9 +1575,13 @@ export default function EmployeeDetailPage() {
                 </div>
 
                 <div className="flex items-center justify-between border-t border-border/50 pt-3 mt-4">
-                  <span className={`text-[10px] font-semibold ${
-                    isConnected ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                  }`}>
+                  <span
+                    className={`text-[10px] font-semibold ${
+                      isConnected
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-muted-foreground"
+                    }`}
+                  >
                     {isConnected ? "Connected" : "Disconnected"}
                   </span>
 
@@ -1577,7 +1685,8 @@ export default function EmployeeDetailPage() {
           <DialogHeader>
             <DialogTitle>Connect Discord Bot</DialogTitle>
             <DialogDescription>
-              Provide the credentials for your Discord Application Bot to allow {employee?.name} to connect.
+              Provide the credentials for your Discord Application Bot to allow{" "}
+              {employee?.name} to connect.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
@@ -1592,7 +1701,9 @@ export default function EmployeeDetailPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="discord-client-id">Application / Client ID (Optional)</Label>
+              <Label htmlFor="discord-client-id">
+                Application / Client ID (Optional)
+              </Label>
               <Input
                 id="discord-client-id"
                 placeholder="1029..."
@@ -1605,9 +1716,7 @@ export default function EmployeeDetailPage() {
             <Button variant="ghost" onClick={() => setShowDiscordDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConnectDiscord}>
-              Confirm Connection
-            </Button>
+            <Button onClick={handleConnectDiscord}>Confirm Connection</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1618,7 +1727,8 @@ export default function EmployeeDetailPage() {
           <DialogHeader>
             <DialogTitle>Connect ClickUp Workspace</DialogTitle>
             <DialogDescription>
-              Enter your Personal API Token to allow {employee?.name} to manage and sync tasks.
+              Enter your Personal API Token to allow {employee?.name} to manage
+              and sync tasks.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
@@ -1637,9 +1747,7 @@ export default function EmployeeDetailPage() {
             <Button variant="ghost" onClick={() => setShowClickupDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConnectClickup}>
-              Confirm Connection
-            </Button>
+            <Button onClick={handleConnectClickup}>Confirm Connection</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1659,7 +1767,8 @@ export default function EmployeeDetailPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              Connect {mcpTokenSlug === "notion"
+              Connect{" "}
+              {mcpTokenSlug === "notion"
                 ? "Notion"
                 : mcpTokenSlug === "vercel"
                   ? "Vercel"
@@ -1674,7 +1783,8 @@ export default function EmployeeDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
-            {connectors?.find((c) => c.slug === mcpTokenSlug)?.requires_custom_server_url ? (
+            {connectors?.find((c) => c.slug === mcpTokenSlug)
+              ?.requires_custom_server_url ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="mcp-server-url">MCP Server URL</Label>
                 <Input
@@ -1706,14 +1816,22 @@ export default function EmployeeDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setShowMcpTokenDialog(false); setMcpServerUrl(""); }}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowMcpTokenDialog(false);
+                setMcpServerUrl("");
+              }}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleConnectMcpToken}
               disabled={createMcpConnectionMutation.isPending}
             >
-              {createMcpConnectionMutation.isPending ? "Connecting…" : "Confirm Connection"}
+              {createMcpConnectionMutation.isPending
+                ? "Connecting…"
+                : "Confirm Connection"}
             </Button>
           </DialogFooter>
         </DialogContent>

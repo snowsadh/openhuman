@@ -31,7 +31,12 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -46,10 +51,18 @@ import {
   useMcpListMcpConnectors,
   useMcpCreateMcpConnection,
   useMcpDeleteMcpConnection,
+  useMcpListEmployeeMcpConnections,
+  useMcpVerifyMcpConnection,
   useEmployeesListEmployeesRoute,
 } from "@repo/api-client";
 
-type Category = "All" | "Productivity" | "Development" | "Data & DBs" | "Communication" | "AI & Search";
+type Category =
+  | "All"
+  | "Productivity"
+  | "Development"
+  | "Data & DBs"
+  | "Communication"
+  | "AI & Search";
 
 interface McpServer {
   id: string;
@@ -84,6 +97,29 @@ interface CatalogEntry {
   verification_status: string;
 }
 
+const ROLE_MCP_ASSIGNMENTS: Record<string, ReadonlySet<string>> = {
+  hr: new Set(["slack", "gmail", "google-calendar", "notion", "web_search"]),
+  sales: new Set([
+    "slack",
+    "gmail",
+    "google-calendar",
+    "hubspot",
+    "web_search",
+    "canva",
+  ]),
+  support: new Set(["slack", "gmail", "zendesk", "notion", "web_search"]),
+  general: new Set([
+    "slack",
+    "google-calendar",
+    "github",
+    "notion",
+    "n8n",
+    "web_search",
+    "canva",
+  ]),
+  "legal-compliance": new Set(["slack", "gmail", "notion", "web_search"]),
+};
+
 const authTypeMap: Record<string, "OAuth2" | "API Key" | "PAT" | "None"> = {
   oauth2: "OAuth2",
   api_key: "API Key",
@@ -105,224 +141,404 @@ interface DisplayMeta {
 
 const DISPLAY_META: Record<string, DisplayMeta> = {
   gmail: {
-    icon: Mail, iconColor: "from-red-500 to-rose-600", author: "Google", rating: 4.9,
-    tools: ["search_threads", "get_message", "create_draft", "send_message", "list_labels"],
+    icon: Mail,
+    iconColor: "from-red-500 to-rose-600",
+    author: "Google",
+    rating: 4.9,
+    tools: [
+      "search_threads",
+      "get_message",
+      "create_draft",
+      "send_message",
+      "list_labels",
+    ],
     resources: ["gmail://threads", "gmail://drafts"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "gmail": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-gmail"]\n    }\n  }\n}`,
   },
   github: {
-    icon: Terminal, iconColor: "from-slate-800 to-slate-900", author: "GitHub", rating: 4.8,
-    tools: ["search_code", "list_repos", "get_issue", "create_pr", "get_file_contents"],
+    icon: Terminal,
+    iconColor: "from-slate-800 to-slate-900",
+    author: "GitHub",
+    rating: 4.8,
+    tools: [
+      "search_code",
+      "list_repos",
+      "get_issue",
+      "create_pr",
+      "get_file_contents",
+    ],
     resources: ["github://repos", "github://issues"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-github"]\n    }\n  }\n}`,
   },
   notion: {
-    icon: Layers, iconColor: "from-zinc-700 to-black", author: "Notion", rating: 4.7,
-    tools: ["search_notion", "retrieve_page", "create_page", "update_database_row"],
+    icon: Layers,
+    iconColor: "from-zinc-700 to-black",
+    author: "Notion",
+    rating: 4.7,
+    tools: [
+      "search_notion",
+      "retrieve_page",
+      "create_page",
+      "update_database_row",
+    ],
     resources: ["notion://pages", "notion://databases"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "notion": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-notion"]\n    }\n  }\n}`,
   },
   vercel: {
-    icon: Code, iconColor: "from-neutral-900 to-zinc-950", author: "Vercel", rating: 4.8,
-    tools: ["list_deployments", "get_project_logs", "add_env_variable", "redeploy_project"],
+    icon: Code,
+    iconColor: "from-neutral-900 to-zinc-950",
+    author: "Vercel",
+    rating: 4.8,
+    tools: [
+      "list_deployments",
+      "get_project_logs",
+      "add_env_variable",
+      "redeploy_project",
+    ],
     resources: ["vercel://projects", "vercel://domains"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "vercel": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-vercel"]\n    }\n  }\n}`,
   },
   n8n: {
-    icon: Puzzle, iconColor: "from-rose-500 to-fuchsia-600", author: "n8n", rating: 4.8,
-    tools: ["search_workflows", "execute_workflow", "create_workflow", "update_workflow"],
+    icon: Puzzle,
+    iconColor: "from-rose-500 to-fuchsia-600",
+    author: "n8n",
+    rating: 4.8,
+    tools: [
+      "search_workflows",
+      "execute_workflow",
+      "create_workflow",
+      "update_workflow",
+    ],
     resources: ["n8n://workflows", "n8n://projects"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "n8n": {\n      "type": "http",\n      "url": "https://your-n8n-instance.com/mcp-server/http",\n      "headers": {\n        "Authorization": "Bearer YOUR_N8N_MCP_ACCESS_TOKEN"\n      }\n    }\n  }\n}`,
   },
   gamma: {
-    icon: Layout, iconColor: "from-fuchsia-500 to-purple-600", author: "Gamma", rating: 4.9,
-    tools: ["generate_presentation", "export_pdf", "list_templates", "get_generation_status"],
+    icon: Layout,
+    iconColor: "from-fuchsia-500 to-purple-600",
+    author: "Gamma",
+    rating: 4.9,
+    tools: [
+      "generate_presentation",
+      "export_pdf",
+      "list_templates",
+      "get_generation_status",
+    ],
     resources: ["gamma://templates", "gamma://documents"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "gamma": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-gamma"]\n    }\n  }\n}`,
   },
   slack: {
-    icon: SlackIcon, iconColor: "from-amber-500 via-rose-500 to-purple-700", author: "Community", rating: 4.6,
+    icon: SlackIcon,
+    iconColor: "from-amber-500 via-rose-500 to-purple-700",
+    author: "Community",
+    rating: 4.6,
     tools: ["send_message", "list_channels", "fetch_history", "create_channel"],
     resources: ["slack://channels", "slack://users"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "slack": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-slack"]\n    }\n  }\n}`,
   },
   postgres: {
-    icon: Database, iconColor: "from-blue-600 to-indigo-700", author: "Postgres Community", rating: 4.8,
+    icon: Database,
+    iconColor: "from-blue-600 to-indigo-700",
+    author: "Postgres Community",
+    rating: 4.8,
     tools: ["execute_query", "list_tables", "get_schema", "describe_table"],
     resources: ["pg://tables", "pg://schemas"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "postgres": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-postgres", "--connection-string", "env:DATABASE_URL"]\n    }\n  }\n}`,
   },
   "brave-search": {
-    icon: Globe, iconColor: "from-orange-500 to-red-600", author: "Brave Software", rating: 4.7,
+    icon: Globe,
+    iconColor: "from-orange-500 to-red-600",
+    author: "Brave Software",
+    rating: 4.7,
     tools: ["web_search", "local_search", "fetch_snippets"],
     resources: ["brave://search-results"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "brave-search": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-brave-search"]\n    }\n  }\n}`,
   },
   huggingface: {
-    icon: Sparkles, iconColor: "from-yellow-400 to-orange-500", author: "Hugging Face", rating: 4.6,
-    tools: ["search_models", "list_datasets", "get_model_details", "run_inference"],
+    icon: Sparkles,
+    iconColor: "from-yellow-400 to-orange-500",
+    author: "Hugging Face",
+    rating: 4.6,
+    tools: [
+      "search_models",
+      "list_datasets",
+      "get_model_details",
+      "run_inference",
+    ],
     resources: ["hf://models", "hf://datasets"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "huggingface": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-huggingface"]\n    }\n  }\n}`,
   },
   jira: {
-    icon: Activity, iconColor: "from-blue-500 to-sky-600", author: "Atlassian", rating: 4.5,
-    tools: ["create_issue", "assign_issue", "transition_issue", "get_sprint_board"],
+    icon: Activity,
+    iconColor: "from-blue-500 to-sky-600",
+    author: "Atlassian",
+    rating: 4.5,
+    tools: [
+      "create_issue",
+      "assign_issue",
+      "transition_issue",
+      "get_sprint_board",
+    ],
     resources: ["jira://issues", "jira://boards"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "jira": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-jira"]\n    }\n  }\n}`,
   },
   linear: {
-    icon: Puzzle, iconColor: "from-neutral-800 to-stone-900", author: "Linear", rating: 4.9,
+    icon: Puzzle,
+    iconColor: "from-neutral-800 to-stone-900",
+    author: "Linear",
+    rating: 4.9,
     tools: ["list_issues", "create_issue", "get_teams", "update_cycles"],
     resources: ["linear://cycles", "linear://issues"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "linear": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-linear"]\n    }\n  }\n}`,
   },
   shopify: {
-    icon: Database, iconColor: "from-green-500 to-emerald-600", author: "Community Dev", rating: 4.4,
+    icon: Database,
+    iconColor: "from-green-500 to-emerald-600",
+    author: "Community Dev",
+    rating: 4.4,
     tools: ["get_products", "check_inventory", "list_recent_orders"],
     resources: ["shopify://products", "shopify://orders"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "shopify": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-shopify"]\n    }\n  }\n}`,
   },
   stripe: {
-    icon: Database, iconColor: "from-violet-500 to-indigo-600", author: "Stripe", rating: 4.8,
-    tools: ["list_charges", "create_customer", "retrieve_invoice", "refund_charge"],
+    icon: Database,
+    iconColor: "from-violet-500 to-indigo-600",
+    author: "Stripe",
+    rating: 4.8,
+    tools: [
+      "list_charges",
+      "create_customer",
+      "retrieve_invoice",
+      "refund_charge",
+    ],
     resources: ["stripe://charges", "stripe://customers"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "stripe": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-stripe"]\n    }\n  }\n}`,
   },
   airtable: {
-    icon: Database, iconColor: "from-blue-400 to-indigo-500", author: "Community", rating: 4.5,
+    icon: Database,
+    iconColor: "from-blue-400 to-indigo-500",
+    author: "Community",
+    rating: 4.5,
     tools: ["get_base_records", "add_row_record", "delete_record"],
     resources: ["airtable://bases"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "airtable": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-airtable"]\n    }\n  }\n}`,
   },
   snowflake: {
-    icon: Database, iconColor: "from-sky-400 to-blue-500", author: "Snowflake", rating: 4.7,
+    icon: Database,
+    iconColor: "from-sky-400 to-blue-500",
+    author: "Snowflake",
+    rating: 4.7,
     tools: ["run_warehouse_sql", "list_schemas", "describe_table_columns"],
     resources: ["snowflake://warehouses"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "snowflake": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-snowflake"]\n    }\n  }\n}`,
   },
   wikipedia: {
-    icon: Globe, iconColor: "from-slate-400 to-slate-600", author: "Wikimedia Foundation", rating: 4.6,
+    icon: Globe,
+    iconColor: "from-slate-400 to-slate-600",
+    author: "Wikimedia Foundation",
+    rating: 4.6,
     tools: ["search_wikipedia", "get_article_summary", "get_related_links"],
     resources: ["wikipedia://articles"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "wikipedia": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-wikipedia"]\n    }\n  }\n}`,
   },
   youtube: {
-    icon: Mail, iconColor: "from-red-600 to-red-700", author: "Google", rating: 4.6,
+    icon: Mail,
+    iconColor: "from-red-600 to-red-700",
+    author: "Google",
+    rating: 4.6,
     tools: ["search_videos", "get_video_transcript", "add_to_playlist"],
     resources: ["youtube://videos", "youtube://playlists"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "youtube": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-youtube"]\n    }\n  }\n}`,
   },
   redis: {
-    icon: Database, iconColor: "from-red-500 to-orange-600", author: "Redis Inc.", rating: 4.7,
-    tools: ["get_cache_key", "set_cache_key", "flush_keyspace", "monitor_pubsub"],
+    icon: Database,
+    iconColor: "from-red-500 to-orange-600",
+    author: "Redis Inc.",
+    rating: 4.7,
+    tools: [
+      "get_cache_key",
+      "set_cache_key",
+      "flush_keyspace",
+      "monitor_pubsub",
+    ],
     resources: ["redis://keyspaces"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "redis": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-redis"]\n    }\n  }\n}`,
   },
   docker: {
-    icon: Terminal, iconColor: "from-blue-500 to-indigo-600", author: "Docker Community", rating: 4.8,
-    tools: ["list_containers", "inspect_logs", "restart_container", "prune_networks"],
+    icon: Terminal,
+    iconColor: "from-blue-500 to-indigo-600",
+    author: "Docker Community",
+    rating: 4.8,
+    tools: [
+      "list_containers",
+      "inspect_logs",
+      "restart_container",
+      "prune_networks",
+    ],
     resources: ["docker://containers", "docker://images"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "docker": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-docker"]\n    }\n  }\n}`,
   },
   "aws-s3": {
-    icon: Terminal, iconColor: "from-orange-500 to-amber-600", author: "Amazon Web Services", rating: 4.7,
+    icon: Terminal,
+    iconColor: "from-orange-500 to-amber-600",
+    author: "Amazon Web Services",
+    rating: 4.7,
     tools: ["list_s3_buckets", "get_bucket_objects", "upload_cloud_file"],
     resources: ["s3://buckets"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "aws-s3": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-aws-s3"]\n    }\n  }\n}`,
   },
   gitlab: {
-    icon: Terminal, iconColor: "from-orange-600 to-rose-600", author: "GitLab", rating: 4.6,
+    icon: Terminal,
+    iconColor: "from-orange-600 to-rose-600",
+    author: "GitLab",
+    rating: 4.6,
     tools: ["list_pipeline_jobs", "create_merge_request", "add_comment_thread"],
     resources: ["gitlab://pipelines", "gitlab://merge-requests"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "gitlab": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-gitlab"]\n    }\n  }\n}`,
   },
   figma: {
-    icon: Puzzle, iconColor: "from-red-500 via-purple-500 to-blue-500", author: "Figma", rating: 4.8,
+    icon: Puzzle,
+    iconColor: "from-red-500 via-purple-500 to-blue-500",
+    author: "Figma",
+    rating: 4.8,
     tools: ["fetch_artboards", "export_frame_asset", "get_styles_library"],
     resources: ["figma://files"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "figma": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-figma"]\n    }\n  }\n}`,
   },
   salesforce: {
-    icon: Database, iconColor: "from-sky-500 to-indigo-500", author: "Salesforce", rating: 4.5,
+    icon: Database,
+    iconColor: "from-sky-500 to-indigo-500",
+    author: "Salesforce",
+    rating: 4.5,
     tools: ["query_leads", "update_crm_account", "list_deals_pipeline"],
     resources: ["salesforce://leads", "salesforce://opportunities"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "salesforce": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-salesforce"]\n    }\n  }\n}`,
   },
   hubspot: {
-    icon: SlackIcon, iconColor: "from-orange-500 to-amber-600", author: "HubSpot", rating: 4.6,
+    icon: SlackIcon,
+    iconColor: "from-orange-500 to-amber-600",
+    author: "HubSpot",
+    rating: 4.6,
     tools: ["get_contact_list", "register_deal", "log_call_interaction"],
     resources: ["hubspot://contacts"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "hubspot": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-hubspot"]\n    }\n  }\n}`,
   },
   zendesk: {
-    icon: SlackIcon, iconColor: "from-emerald-600 to-teal-700", author: "Zendesk", rating: 4.6,
+    icon: SlackIcon,
+    iconColor: "from-emerald-600 to-teal-700",
+    author: "Zendesk",
+    rating: 4.6,
     tools: ["retrieve_tickets", "assign_agent", "add_ticket_comment"],
     resources: ["zendesk://tickets"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "zendesk": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-zendesk"]\n    }\n  }\n}`,
   },
   trello: {
-    icon: Puzzle, iconColor: "from-blue-500 to-sky-500", author: "Atlassian", rating: 4.4,
+    icon: Puzzle,
+    iconColor: "from-blue-500 to-sky-500",
+    author: "Atlassian",
+    rating: 4.4,
     tools: ["create_trello_card", "move_card_list", "add_card_checklist"],
     resources: ["trello://boards"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "trello": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-trello"]\n    }\n  }\n}`,
   },
   "google-calendar": {
-    icon: Calendar, iconColor: "from-blue-500 to-indigo-600", author: "Google", rating: 4.8,
-    tools: ["list_calendar_events", "create_calendar_event", "check_availability"],
+    icon: Calendar,
+    iconColor: "from-blue-500 to-indigo-600",
+    author: "Google",
+    rating: 4.8,
+    tools: [
+      "list_calendar_events",
+      "create_calendar_event",
+      "check_availability",
+    ],
     resources: ["calendar://events"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "google-calendar": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-calendar"]\n    }\n  }\n}`,
   },
   twilio: {
-    icon: PhoneCall, iconColor: "from-red-500 to-red-600", author: "Twilio", rating: 4.6,
+    icon: PhoneCall,
+    iconColor: "from-red-500 to-red-600",
+    author: "Twilio",
+    rating: 4.6,
     tools: ["send_sms_message", "initiate_voice_call", "verify_phone_otp"],
     resources: ["twilio://messages", "twilio://calls"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "twilio": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-twilio"]\n    }\n  }\n}`,
   },
   medium: {
-    icon: Globe, iconColor: "from-neutral-900 to-stone-950", author: "Medium", rating: 4.3,
+    icon: Globe,
+    iconColor: "from-neutral-900 to-stone-950",
+    author: "Medium",
+    rating: 4.3,
     tools: ["create_blog_post", "list_user_stories", "publish_draft"],
     resources: ["medium://stories"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "medium": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-medium"]\n    }\n  }\n}`,
   },
   discord: {
-    icon: SlackIcon, iconColor: "from-indigo-500 to-blue-600", author: "Community", rating: 4.5,
+    icon: SlackIcon,
+    iconColor: "from-indigo-500 to-blue-600",
+    author: "Community",
+    rating: 4.5,
     tools: ["dispatch_webhook", "list_channel_messages", "list_guild_members"],
     resources: ["discord://guilds"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "discord": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-discord"]\n    }\n  }\n}`,
   },
   "google-maps": {
-    icon: MapPin, iconColor: "from-green-500 to-emerald-600", author: "Google", rating: 4.8,
+    icon: MapPin,
+    iconColor: "from-green-500 to-emerald-600",
+    author: "Google",
+    rating: 4.8,
     tools: ["resolve_geocode", "calculate_route", "search_places_nearby"],
     resources: ["maps://routes"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "google-maps": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-maps"]\n    }\n  }\n}`,
   },
   zoom: {
-    icon: PhoneCall, iconColor: "from-blue-500 to-sky-600", author: "Zoom Inc.", rating: 4.7,
-    tools: ["schedule_instant_meeting", "list_recordings", "register_webinar_user"],
+    icon: PhoneCall,
+    iconColor: "from-blue-500 to-sky-600",
+    author: "Zoom Inc.",
+    rating: 4.7,
+    tools: [
+      "schedule_instant_meeting",
+      "list_recordings",
+      "register_webinar_user",
+    ],
     resources: ["zoom://meetings"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "zoom": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-zoom"]\n    }\n  }\n}`,
   },
   clickup: {
-    icon: Puzzle, iconColor: "from-purple-500 to-rose-500", author: "ClickUp", rating: 4.5,
+    icon: Puzzle,
+    iconColor: "from-purple-500 to-rose-500",
+    author: "ClickUp",
+    rating: 4.5,
     tools: ["create_clickup_task", "update_task_status", "track_task_time"],
     resources: ["clickup://tasks"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "clickup": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-clickup"]\n    }\n  }\n}`,
   },
   firebase: {
-    icon: Terminal, iconColor: "from-amber-400 to-orange-500", author: "Google", rating: 4.7,
+    icon: Terminal,
+    iconColor: "from-amber-400 to-orange-500",
+    author: "Google",
+    rating: 4.7,
     tools: ["query_firestore", "list_auth_users", "dispatch_fcm_notification"],
     resources: ["firebase://firestore", "firebase://auth"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "firebase": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-firebase"]\n    }\n  }\n}`,
   },
   "exa-search": {
-    icon: Sparkles, iconColor: "from-teal-500 to-emerald-600", author: "Exa", rating: 4.9,
+    icon: Sparkles,
+    iconColor: "from-teal-500 to-emerald-600",
+    author: "Exa",
+    rating: 4.9,
     tools: ["neural_search", "find_similar_pages", "extract_page_content"],
     resources: ["exa://results"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "exa-search": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-exa"]\n    }\n  }\n}`,
   },
   elasticsearch: {
-    icon: Database, iconColor: "from-teal-400 to-blue-500", author: "Elasticsearch", rating: 4.6,
-    tools: ["query_index_documents", "get_cluster_health", "create_search_index"],
+    icon: Database,
+    iconColor: "from-teal-400 to-blue-500",
+    author: "Elasticsearch",
+    rating: 4.6,
+    tools: [
+      "query_index_documents",
+      "get_cluster_health",
+      "create_search_index",
+    ],
     resources: ["elastic://indices"],
     mcpJsonConfig: `{\n  "mcpServers": {\n    "elasticsearch": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-elasticsearch"]\n    }\n  }\n}`,
   },
@@ -330,7 +546,8 @@ const DISPLAY_META: Record<string, DisplayMeta> = {
 
 const getErrorMessage = (err: unknown): string => {
   if (typeof err === "object" && err !== null) {
-    const maybeResponse = (err as { response?: { data?: { detail?: string } } }).response;
+    const maybeResponse = (err as { response?: { data?: { detail?: string } } })
+      .response;
     if (typeof maybeResponse?.data?.detail === "string") {
       return maybeResponse.data.detail;
     }
@@ -342,15 +559,44 @@ const getErrorMessage = (err: unknown): string => {
   return "";
 };
 
+function chooseReadProbe(
+  tools: string[],
+): { tool: string; parameters: Record<string, unknown> } | null {
+  const ordered = [...tools].sort((left, right) => {
+    const rank = (name: string) =>
+      name.includes("list")
+        ? 0
+        : name.includes("search")
+          ? 1
+          : name.includes("read")
+            ? 2
+            : 3;
+    return rank(left.toLowerCase()) - rank(right.toLowerCase());
+  });
+  const tool = ordered.find((name) =>
+    /(^|[_-])(list|search|read)([_-]|$)/i.test(name),
+  );
+  if (!tool) return null;
+  const parameters = /search/i.test(tool) ? { query: "OpenHuman" } : {};
+  return { tool, parameters };
+}
+
 export default function McpMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [selectedServer, setSelectedServer] = useState<McpServer | null>(null);
-  const [connectingSlugs, setConnectingSlugs] = useState<Set<string>>(new Set());
-  const [credentialServer, setCredentialServer] = useState<McpServer | null>(null);
+  const [connectingSlugs, setConnectingSlugs] = useState<Set<string>>(
+    new Set(),
+  );
+  const [credentialServer, setCredentialServer] = useState<McpServer | null>(
+    null,
+  );
   const [credentialValue, setCredentialValue] = useState("");
   const [credentialServerUrl, setCredentialServerUrl] = useState("");
-  const [credentialAccountIdentifier, setCredentialAccountIdentifier] = useState("");
+  const [credentialAccountIdentifier, setCredentialAccountIdentifier] =
+    useState("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [verifyingSlugs, setVerifyingSlugs] = useState<Set<string>>(new Set());
 
   const orgId = useOrgStore((s) => s.orgId);
 
@@ -372,38 +618,115 @@ export default function McpMarketplacePage() {
     queryKey: [`/api/organizations/${orgId}/mcp-catalog`],
     queryFn: async () => {
       const token = localStorage.getItem("oh_token");
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-      const res = await fetch(`${baseUrl}/api/organizations/${orgId}/mcp-catalog`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error(`Failed to fetch catalog (HTTP ${res.status})`);
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const res = await fetch(
+        `${baseUrl}/api/organizations/${orgId}/mcp-catalog`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+      if (!res.ok)
+        throw new Error(`Failed to fetch catalog (HTTP ${res.status})`);
       return res.json() as Promise<{ entries: CatalogEntry[] }>;
     },
     enabled: !!orgId,
   });
 
-  const empId = employees?.[0]?.id;
+  const empId = selectedEmployeeId || employees?.[0]?.id;
+  const selectedEmployee = employees?.find((employee) => employee.id === empId);
+  const assignedSlugs =
+    ROLE_MCP_ASSIGNMENTS[selectedEmployee?.employee_type ?? "general"] ??
+    ROLE_MCP_ASSIGNMENTS.general;
+
+  const { data: employeeConnections, refetch: refetchEmployeeConnections } =
+    useMcpListEmployeeMcpConnections(orgId ?? "", empId ?? "", {
+      query: { enabled: !!(orgId && empId) },
+    });
 
   const connectedSlugs = useMemo(() => {
     const slugs = new Set<string>();
-    if (connectors) {
-      for (const c of connectors) {
-        if (c.is_connected) slugs.add(c.slug);
+    if (employeeConnections?.connections) {
+      for (const connection of employeeConnections.connections) {
+        if (connection.status === "connected")
+          slugs.add(connection.connector_slug);
       }
     }
     return slugs;
-  }, [connectors]);
+  }, [employeeConnections]);
+
+  const connectionBySlug = useMemo(
+    () =>
+      new Map(
+        employeeConnections?.connections?.map((connection) => [
+          connection.connector_slug,
+          connection,
+        ]) ?? [],
+      ),
+    [employeeConnections],
+  );
 
   const queryClient = useQueryClient();
   const createMutation = useMcpCreateMcpConnection();
   const deleteMutation = useMcpDeleteMcpConnection();
+  const verifyMutation = useMcpVerifyMcpConnection();
 
   const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: [`/api/organizations/${orgId}/mcp-connectors`] });
-    queryClient.invalidateQueries({ queryKey: [`/api/organizations/${orgId}/mcp-catalog`] });
-  }, [queryClient, orgId]);
+    queryClient.invalidateQueries({
+      queryKey: [`/api/organizations/${orgId}/mcp-connectors`],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [`/api/organizations/${orgId}/mcp-catalog`],
+    });
+    void refetchEmployeeConnections();
+  }, [queryClient, orgId, refetchEmployeeConnections]);
 
-  const handleInstallToggle = async (e: React.MouseEvent, server: McpServer) => {
+  const handleVerify = useCallback(
+    async (e: React.MouseEvent, server: McpServer) => {
+      e.stopPropagation();
+      if (!orgId || !empId) return;
+      setVerifyingSlugs((previous) => new Set(previous).add(server.id));
+      try {
+        const existing = connectionBySlug.get(server.id);
+        const probe = chooseReadProbe(
+          (existing?.discovered_tools ?? []).filter(
+            (tool): tool is string => typeof tool === "string",
+          ),
+        );
+        const result = await verifyMutation.mutateAsync({
+          orgId,
+          empId,
+          slug: server.id,
+          data: {
+            probe_tool: probe?.tool,
+            probe_parameters: probe?.parameters ?? {},
+          },
+        });
+        await invalidate();
+        toast.success(
+          result.probe_executed
+            ? `${server.name} passed an ArmorIQ-governed read probe and is verified.`
+            : `${server.name} discovered ${result.discovered_tools.length} tools. Click Verify again to run its safest read probe.`,
+        );
+      } catch (error: unknown) {
+        toast.error(
+          `Verification failed for ${server.name}. ${getErrorMessage(error)}`,
+        );
+      } finally {
+        setVerifyingSlugs((previous) => {
+          const next = new Set(previous);
+          next.delete(server.id);
+          return next;
+        });
+      }
+    },
+    [orgId, empId, connectionBySlug, verifyMutation, invalidate],
+  );
+
+  const handleInstallToggle = async (
+    e: React.MouseEvent,
+    server: McpServer,
+  ) => {
     e.stopPropagation();
     if (!orgId || !empId) {
       toast.error("Organization or employee not loaded.");
@@ -414,8 +737,12 @@ export default function McpMarketplacePage() {
     const isCurrentlyInstalled = connectedSlugs.has(server.id);
 
     if (!isCurrentlyInstalled && connectorInfo) {
-      const authTypes = connectorInfo.auth_types ?? [connectorInfo.auth_type ?? ""];
-      const supportsPaste = authTypes.some((t) => t === "pat_bearer" || t === "api_key_header");
+      const authTypes = connectorInfo.auth_types ?? [
+        connectorInfo.auth_type ?? "",
+      ];
+      const supportsPaste = authTypes.some(
+        (t) => t === "pat_bearer" || t === "api_key_header",
+      );
       if (supportsPaste || connectorInfo.auth_type === "none") {
         setCredentialServer(server);
         setCredentialValue("");
@@ -437,14 +764,20 @@ export default function McpMarketplacePage() {
         await invalidate();
         toast.success(`Revoked access to ${server.name}.`);
       } else if (connectorInfo?.auth_type === "oauth2") {
-        const token = typeof window !== "undefined" ? localStorage.getItem("oh_token") : null;
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("oh_token")
+            : null;
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
         const url = `${apiUrl}/api/organizations/${orgId}/employees/${empId}/mcp-connections/${server.id}/install?token=${encodeURIComponent(token ?? "")}&redirect_to=${encodeURIComponent(window.location.href)}`;
         window.location.assign(url);
         return;
       }
     } catch (err: unknown) {
-      toast.error(`Failed to ${isCurrentlyInstalled ? "disconnect" : "connect"} ${server.name}. ${getErrorMessage(err)}`);
+      toast.error(
+        `Failed to ${isCurrentlyInstalled ? "disconnect" : "connect"} ${server.name}. ${getErrorMessage(err)}`,
+      );
     } finally {
       setConnectingSlugs((prev) => {
         const next = new Set(prev);
@@ -459,10 +792,17 @@ export default function McpMarketplacePage() {
       return;
     }
 
-    const connectorInfo = connectors?.find((c) => c.slug === credentialServer.id);
-    const authTypes = connectorInfo?.auth_types ?? [connectorInfo?.auth_type ?? ""];
-    const selectedAuthType = authTypes.find((t) => t === "pat_bearer" || t === "api_key_header") ?? undefined;
-    const requiresCustomServerUrl = connectorInfo?.requires_custom_server_url === true;
+    const connectorInfo = connectors?.find(
+      (c) => c.slug === credentialServer.id,
+    );
+    const authTypes = connectorInfo?.auth_types ?? [
+      connectorInfo?.auth_type ?? "",
+    ];
+    const selectedAuthType =
+      authTypes.find((t) => t === "pat_bearer" || t === "api_key_header") ??
+      undefined;
+    const requiresCustomServerUrl =
+      connectorInfo?.requires_custom_server_url === true;
 
     if (!credentialValue.trim()) {
       toast.error("Please enter a credential.");
@@ -472,7 +812,10 @@ export default function McpMarketplacePage() {
       toast.error("Please enter the MCP server URL.");
       return;
     }
-    if (credentialServer.id === "zendesk" && !credentialAccountIdentifier.includes("@")) {
+    if (
+      credentialServer.id === "zendesk" &&
+      !credentialAccountIdentifier.includes("@")
+    ) {
       toast.error("Please enter the Zendesk administrator email.");
       return;
     }
@@ -486,20 +829,29 @@ export default function McpMarketplacePage() {
         data: {
           credential: credentialValue.trim(),
           auth_type: selectedAuthType,
-          server_url: requiresCustomServerUrl ? credentialServerUrl.trim() : undefined,
-          account_identifier: credentialServer.id === "zendesk" ? credentialAccountIdentifier.trim() : undefined,
+          server_url: requiresCustomServerUrl
+            ? credentialServerUrl.trim()
+            : undefined,
+          account_identifier:
+            credentialServer.id === "zendesk"
+              ? credentialAccountIdentifier.trim()
+              : undefined,
           scopes: [],
           org_wide: false,
         },
       });
       await invalidate();
-      toast.success(`${credentialServer.name} credentials saved. Verify a read action before use.`);
+      toast.success(
+        `${credentialServer.name} credentials saved. Verify a read action before use.`,
+      );
       setCredentialServer(null);
       setCredentialValue("");
       setCredentialServerUrl("");
       setCredentialAccountIdentifier("");
     } catch (err: unknown) {
-      toast.error(`Failed to connect ${credentialServer.name}. ${getErrorMessage(err)}`);
+      toast.error(
+        `Failed to connect ${credentialServer.name}. ${getErrorMessage(err)}`,
+      );
     } finally {
       setConnectingSlugs((prev) => {
         const next = new Set(prev);
@@ -507,7 +859,17 @@ export default function McpMarketplacePage() {
         return next;
       });
     }
-  }, [orgId, empId, credentialServer, credentialValue, credentialServerUrl, credentialAccountIdentifier, connectors, createMutation, invalidate]);
+  }, [
+    orgId,
+    empId,
+    credentialServer,
+    credentialValue,
+    credentialServerUrl,
+    credentialAccountIdentifier,
+    connectors,
+    createMutation,
+    invalidate,
+  ]);
 
   const servers = useMemo((): McpServer[] => {
     if (!catalog?.entries) return [];
@@ -527,7 +889,9 @@ export default function McpMarketplacePage() {
         rating: meta?.rating ?? 4.0,
         tools: meta?.tools ?? [],
         resources: meta?.resources ?? [],
-        mcpJsonConfig: meta?.mcpJsonConfig ?? `{\n  "mcpServers": {\n    "${entry.slug}": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-${entry.slug}"]\n    }\n  }\n}`,
+        mcpJsonConfig:
+          meta?.mcpJsonConfig ??
+          `{\n  "mcpServers": {\n    "${entry.slug}": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-${entry.slug}"]\n    }\n  }\n}`,
         catalogState: entry.catalog_state,
         isInstallable: entry.is_installable,
         verificationStatus: entry.verification_status,
@@ -541,12 +905,20 @@ export default function McpMarketplacePage() {
         server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         server.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         server.author.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "All" || server.category === selectedCategory;
+      const matchesCategory =
+        selectedCategory === "All" || server.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [servers, searchQuery, selectedCategory]);
 
-  const categories: Category[] = ["All", "Productivity", "Development", "Data & DBs", "Communication", "AI & Search"];
+  const categories: Category[] = [
+    "All",
+    "Productivity",
+    "Development",
+    "Data & DBs",
+    "Communication",
+    "AI & Search",
+  ];
 
   return (
     <div className="flex flex-col gap-8 p-8 max-w-7xl mx-auto">
@@ -563,10 +935,42 @@ export default function McpMarketplacePage() {
             MCP Integration Directory & Marketplace
           </h1>
           <p className="text-muted-foreground text-sm max-w-2xl">
-            Explore, preview, and test 30+ official and community MCP servers to extend the resource capabilities and execution tools of your AI agent team.
+            Explore, preview, and test 30+ official and community MCP servers to
+            extend the resource capabilities and execution tools of your AI
+            agent team.
           </p>
         </div>
       </div>
+
+      {employees && employees.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Configure tools for one AI employee
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Only role-assigned connectors can run, and only after an
+              ArmorIQ-governed read probe passes.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            Employee
+            <select
+              aria-label="AI employee"
+              className="h-9 min-w-48 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              value={empId ?? ""}
+              onChange={(event) => setSelectedEmployeeId(event.target.value)}
+            >
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name} ·{" "}
+                  {employee.role ?? employee.employee_type ?? "General"}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between bg-muted/20 p-4 rounded-xl backdrop-blur-sm">
@@ -608,16 +1012,22 @@ export default function McpMarketplacePage() {
 
       {/* Grid count summary */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Showing {filteredServers.length} of {servers.length} MCP servers</span>
+        <span>
+          Showing {filteredServers.length} of {servers.length} MCP servers
+        </span>
       </div>
 
       {!catalogLoading && !catalogError && !empId ? (
         <div className="flex items-start gap-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
           <Bot className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
-            <p className="font-semibold text-foreground">Browse first, connect after creating an AI employee</p>
+            <p className="font-semibold text-foreground">
+              Browse first, connect after creating an AI employee
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              The complete MCP directory is available now. Create an employee before connecting a server so OpenHuman knows which coworker should receive its tools.
+              The complete MCP directory is available now. Create an employee
+              before connecting a server so OpenHuman knows which coworker
+              should receive its tools.
             </p>
           </div>
         </div>
@@ -631,12 +1041,23 @@ export default function McpMarketplacePage() {
       ) : catalogError ? (
         <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-destructive/40 rounded-xl bg-destructive/5">
           <AlertCircle className="size-12 text-destructive/70 mb-3" />
-          <h3 className="font-semibold text-lg text-foreground">MCP directory could not be loaded</h3>
+          <h3 className="font-semibold text-lg text-foreground">
+            MCP directory could not be loaded
+          </h3>
           <p className="text-sm text-muted-foreground max-w-md mt-1">
-            The marketplace service did not return its catalog. Retry the request instead of treating this as an empty directory.
+            The marketplace service did not return its catalog. Retry the
+            request instead of treating this as an empty directory.
           </p>
-          <Button variant="outline" size="sm" onClick={() => refetchCatalog()} disabled={catalogFetching} className="mt-4">
-            {catalogFetching ? <Loader2 className="mr-2 size-3.5 animate-spin" /> : null}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchCatalog()}
+            disabled={catalogFetching}
+            className="mt-4"
+          >
+            {catalogFetching ? (
+              <Loader2 className="mr-2 size-3.5 animate-spin" />
+            ) : null}
             Retry loading
           </Button>
         </div>
@@ -645,6 +1066,11 @@ export default function McpMarketplacePage() {
           {filteredServers.map((server) => {
             const isInstalled = connectedSlugs.has(server.id);
             const isLoading = connectingSlugs.has(server.id);
+            const isVerifying = verifyingSlugs.has(server.id);
+            const connection = connectionBySlug.get(server.id);
+            const verificationStatus =
+              connection?.verification_status ?? "unverified";
+            const isAssigned = assignedSlugs.has(server.id);
 
             return (
               <Card
@@ -679,41 +1105,96 @@ export default function McpMarketplacePage() {
 
                 <CardFooter className="flex items-center justify-between border-t border-muted/30 p-4 bg-muted/10 group-hover:bg-muted/20 transition-colors">
                   <div className="flex gap-1">
-                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 border border-muted/50 bg-background/50 font-medium">
+                    <Badge
+                      variant="secondary"
+                      className="text-[9px] px-1.5 py-0.5 border border-muted/50 bg-background/50 font-medium"
+                    >
                       {server.category}
                     </Badge>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 border border-muted-foreground/20 font-medium text-muted-foreground">
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] px-1.5 py-0.5 border border-muted-foreground/20 font-medium text-muted-foreground"
+                    >
                       {server.authType}
                     </Badge>
+                    {isInstalled ? (
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] px-1.5 py-0.5 font-medium ${
+                          verificationStatus === "verified"
+                            ? "border-emerald-500/30 text-emerald-600"
+                            : verificationStatus === "error"
+                              ? "border-destructive/30 text-destructive"
+                              : "border-amber-500/30 text-amber-600"
+                        }`}
+                      >
+                        {verificationStatus}
+                      </Badge>
+                    ) : null}
                   </div>
 
                   <Button
                     size="sm"
                     variant={isInstalled ? "outline" : "default"}
-                    disabled={isLoading || !empId || !server.isInstallable}
-                    onClick={(e) => handleInstallToggle(e, server)}
-                    title={!server.isInstallable ? "This connector is not yet verified" : !empId ? "Create an AI employee before connecting MCP tools" : undefined}
+                    disabled={
+                      isLoading ||
+                      isVerifying ||
+                      !empId ||
+                      !server.isInstallable ||
+                      !isAssigned
+                    }
+                    onClick={(event) => {
+                      if (isInstalled && verificationStatus !== "verified") {
+                        void handleVerify(event, server);
+                        return;
+                      }
+                      void handleInstallToggle(event, server);
+                    }}
+                    title={
+                      !isAssigned
+                        ? "This MCP is not assigned to the selected employee role"
+                        : !server.isInstallable
+                          ? "This connector is not yet available"
+                          : !empId
+                            ? "Create an AI employee before connecting MCP tools"
+                            : undefined
+                    }
                     className={`h-7 px-3 text-[10px] font-bold transition-all rounded-md shrink-0 flex items-center gap-1 ${
                       isInstalled
                         ? "border-emerald-500/20 text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/10"
                         : ""
                     }`}
                   >
-                    {isLoading ? (
+                    {isLoading || isVerifying ? (
                       <>
                         <Loader2 className="size-3 animate-spin" />
-                        {isInstalled ? "Revoking..." : "Connecting..."}
+                        {isVerifying
+                          ? "Discovering..."
+                          : isInstalled
+                            ? "Revoking..."
+                            : "Connecting..."}
                       </>
+                    ) : !isAssigned ? (
+                      <>Not assigned</>
                     ) : !server.isInstallable ? (
                       <>Unavailable</>
+                    ) : isInstalled && verificationStatus !== "verified" ? (
+                      <>
+                        <Activity className="size-3.5" />
+                        Verify tools
+                      </>
                     ) : isInstalled ? (
                       <>
                         <CheckCircle className="size-3.5 fill-current" />
-                        Connected
+                        Verified
                       </>
                     ) : (
                       <>
-                        {empId ? <Download className="size-3" /> : <Bot className="size-3" />}
+                        {empId ? (
+                          <Download className="size-3" />
+                        ) : (
+                          <Bot className="size-3" />
+                        )}
                         {empId ? "Connect" : "Create employee first"}
                       </>
                     )}
@@ -726,36 +1207,66 @@ export default function McpMarketplacePage() {
       ) : (
         <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-border rounded-xl bg-muted/10">
           <Puzzle className="size-12 text-muted-foreground/40 mb-3 animate-pulse" />
-          <h3 className="font-semibold text-lg text-foreground">No MCP servers found</h3>
+          <h3 className="font-semibold text-lg text-foreground">
+            No MCP servers found
+          </h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
-            We could not find any MCP servers matching <code>{searchQuery}</code> under the category {selectedCategory}. Try revising your terms.
+            We could not find any MCP servers matching{" "}
+            <code>{searchQuery}</code> under the category {selectedCategory}.
+            Try revising your terms.
           </p>
-          <Button variant="outline" size="sm" onClick={() => { setSearchQuery(""); setSelectedCategory("All"); }} className="mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchQuery("");
+              setSelectedCategory("All");
+            }}
+            className="mt-4"
+          >
             Reset Filters
           </Button>
         </div>
       )}
 
-      <Dialog open={credentialServer !== null} onOpenChange={(open) => { if (!open) { setCredentialServer(null); setCredentialValue(""); setCredentialServerUrl(""); setCredentialAccountIdentifier(""); } }}>
+      <Dialog
+        open={credentialServer !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCredentialServer(null);
+            setCredentialValue("");
+            setCredentialServerUrl("");
+            setCredentialAccountIdentifier("");
+          }
+        }}
+      >
         {credentialServer ? (
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Connect {credentialServer.name}</DialogTitle>
               <DialogDescription>
-                {connectors?.find((c) => c.slug === credentialServer.id)?.requires_custom_server_url
+                {connectors?.find((c) => c.slug === credentialServer.id)
+                  ?.requires_custom_server_url
                   ? "Paste your MCP server URL and access token to connect this integration."
                   : "Paste your access token or API key to connect this integration."}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-4">
-              {connectors?.find((c) => c.slug === credentialServer.id)?.requires_custom_server_url ? (
+              {connectors?.find((c) => c.slug === credentialServer.id)
+                ?.requires_custom_server_url ? (
                 <div className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium">
-                    {credentialServer.id === "zendesk" ? "Zendesk account URL" : "MCP Server URL"}
+                    {credentialServer.id === "zendesk"
+                      ? "Zendesk account URL"
+                      : "MCP Server URL"}
                   </span>
                   <Input
                     type="url"
-                    placeholder={credentialServer.id === "zendesk" ? "https://your-company.zendesk.com" : "https://your-n8n-instance.com/mcp-server/http"}
+                    placeholder={
+                      credentialServer.id === "zendesk"
+                        ? "https://your-company.zendesk.com"
+                        : "https://your-n8n-instance.com/mcp-server/http"
+                    }
                     value={credentialServerUrl}
                     onChange={(e) => setCredentialServerUrl(e.target.value)}
                   />
@@ -763,12 +1274,16 @@ export default function McpMarketplacePage() {
               ) : null}
               {credentialServer.id === "zendesk" ? (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium">Zendesk administrator email</span>
+                  <span className="text-sm font-medium">
+                    Zendesk administrator email
+                  </span>
                   <Input
                     type="email"
                     placeholder="admin@company.com"
                     value={credentialAccountIdentifier}
-                    onChange={(e) => setCredentialAccountIdentifier(e.target.value)}
+                    onChange={(e) =>
+                      setCredentialAccountIdentifier(e.target.value)
+                    }
                   />
                 </div>
               ) : null}
@@ -776,18 +1291,41 @@ export default function McpMarketplacePage() {
                 <span className="text-sm font-medium">Credential</span>
                 <Input
                   type="password"
-                  placeholder={credentialServer.id === "n8n" ? "n8n_pat_..." : credentialServer.id === "zendesk" ? "Zendesk API token" : "Enter token…"}
+                  placeholder={
+                    credentialServer.id === "n8n"
+                      ? "n8n_pat_..."
+                      : credentialServer.id === "zendesk"
+                        ? "Zendesk API token"
+                        : "Enter token…"
+                  }
                   value={credentialValue}
                   onChange={(e) => setCredentialValue(e.target.value)}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => { setCredentialServer(null); setCredentialValue(""); setCredentialServerUrl(""); setCredentialAccountIdentifier(""); }}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setCredentialServer(null);
+                  setCredentialValue("");
+                  setCredentialServerUrl("");
+                  setCredentialAccountIdentifier("");
+                }}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleCredentialConnect} disabled={credentialServer ? connectingSlugs.has(credentialServer.id) : false}>
-                {credentialServer && connectingSlugs.has(credentialServer.id) ? "Connecting..." : "Connect"}
+              <Button
+                onClick={handleCredentialConnect}
+                disabled={
+                  credentialServer
+                    ? connectingSlugs.has(credentialServer.id)
+                    : false
+                }
+              >
+                {credentialServer && connectingSlugs.has(credentialServer.id)
+                  ? "Connecting..."
+                  : "Connect"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -795,7 +1333,10 @@ export default function McpMarketplacePage() {
       </Dialog>
 
       {/* MCP Server Inspector Dialog Modal */}
-      <Dialog open={selectedServer !== null} onOpenChange={(open) => !open && setSelectedServer(null)}>
+      <Dialog
+        open={selectedServer !== null}
+        onOpenChange={(open) => !open && setSelectedServer(null)}
+      >
         {selectedServer && (
           <DialogContent className="max-w-2xl overflow-hidden rounded-xl border border-border bg-card">
             <DialogHeader className="flex flex-row items-center gap-4 border-b border-muted/50 pb-4">
@@ -807,14 +1348,17 @@ export default function McpMarketplacePage() {
                   {selectedServer.name}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Official MCP Server by {selectedServer.author} • Rating: {selectedServer.rating}/5.0
+                  Official MCP Server by {selectedServer.author} • Rating:{" "}
+                  {selectedServer.rating}/5.0
                 </DialogDescription>
               </div>
             </DialogHeader>
 
             <div className="flex flex-col gap-5 py-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="flex flex-col gap-1.5">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Description</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+                  Description
+                </h4>
                 <p className="text-sm text-foreground leading-relaxed">
                   {selectedServer.description}
                 </p>
@@ -822,15 +1366,22 @@ export default function McpMarketplacePage() {
 
               <div className="grid grid-cols-2 gap-4 bg-muted/30 border border-border p-3 rounded-lg text-xs">
                 <div className="flex flex-col gap-1">
-                  <span className="font-medium text-muted-foreground">Endpoint Base URL</span>
+                  <span className="font-medium text-muted-foreground">
+                    Endpoint Base URL
+                  </span>
                   <code className="text-[11px] font-mono text-primary select-all truncate">
                     {selectedServer.url}
                   </code>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="font-medium text-muted-foreground">Authentication Protocol</span>
+                  <span className="font-medium text-muted-foreground">
+                    Authentication Protocol
+                  </span>
                   <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <Badge variant="outline" className="text-[10px] py-0.5 px-1.5">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] py-0.5 px-1.5"
+                    >
                       {selectedServer.authType}
                     </Badge>
                   </span>
@@ -840,11 +1391,17 @@ export default function McpMarketplacePage() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-1.5">
                   <Code className="size-4 text-primary" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Exposed Server Tools ({selectedServer.tools.length})</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    Exposed Server Tools ({selectedServer.tools.length})
+                  </h4>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedServer.tools.map((tool) => (
-                    <Badge key={tool} variant="secondary" className="font-mono text-[10px] px-2 py-0.5 border border-muted">
+                    <Badge
+                      key={tool}
+                      variant="secondary"
+                      className="font-mono text-[10px] px-2 py-0.5 border border-muted"
+                    >
                       {tool}
                     </Badge>
                   ))}
@@ -854,11 +1411,17 @@ export default function McpMarketplacePage() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-1.5">
                   <Layers className="size-4 text-primary" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Exposed Resource Schemas</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    Exposed Resource Schemas
+                  </h4>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedServer.resources.map((res) => (
-                    <Badge key={res} variant="outline" className="font-mono text-[10px] px-2 py-0.5 border-dashed border-primary/20 text-primary bg-primary/5">
+                    <Badge
+                      key={res}
+                      variant="outline"
+                      className="font-mono text-[10px] px-2 py-0.5 border-dashed border-primary/20 text-primary bg-primary/5"
+                    >
                       {res}
                     </Badge>
                   ))}
@@ -869,13 +1432,17 @@ export default function McpMarketplacePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Terminal className="size-4 text-primary" />
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">mcp.json Configuration block</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+                      mcp.json Configuration block
+                    </h4>
                   </div>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      navigator.clipboard.writeText(selectedServer.mcpJsonConfig);
+                      navigator.clipboard.writeText(
+                        selectedServer.mcpJsonConfig,
+                      );
                       toast.success("Configuration copied to clipboard!");
                     }}
                     className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
@@ -891,32 +1458,62 @@ export default function McpMarketplacePage() {
 
             <DialogFooter className="border-t border-muted/50 pt-4 flex sm:justify-between items-center">
               <span className="text-[10px] text-muted-foreground hidden sm:inline">
-                Learn more at <a href="https://modelcontextprotocol.io" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">modelcontextprotocol.io <ExternalLink className="size-2.5" /></a>
+                Learn more at{" "}
+                <a
+                  href="https://modelcontextprotocol.io"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                >
+                  modelcontextprotocol.io <ExternalLink className="size-2.5" />
+                </a>
               </span>
               <div className="flex gap-2 w-full sm:w-auto">
-                <Button variant="outline" size="sm" onClick={() => setSelectedServer(null)} className="flex-1 sm:flex-none">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedServer(null)}
+                  className="flex-1 sm:flex-none"
+                >
                   Close
                 </Button>
                 <Button
                   size="sm"
-                  disabled={connectingSlugs.has(selectedServer.id) || !empId || !selectedServer.isInstallable}
-                  title={!selectedServer.isInstallable ? "This connector is unavailable" : !empId ? "Create an AI employee before connecting MCP tools" : undefined}
+                  disabled={
+                    connectingSlugs.has(selectedServer.id) ||
+                    !empId ||
+                    !selectedServer.isInstallable
+                  }
+                  title={
+                    !selectedServer.isInstallable
+                      ? "This connector is unavailable"
+                      : !empId
+                        ? "Create an AI employee before connecting MCP tools"
+                        : undefined
+                  }
                   onClick={(e) => {
                     handleInstallToggle(e, selectedServer);
                     setSelectedServer(null);
                   }}
                   className={`flex-1 sm:flex-none ${
-                    connectedSlugs.has(selectedServer.id) ? "bg-emerald-600 hover:bg-emerald-700" : ""
+                    connectedSlugs.has(selectedServer.id)
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : ""
                   }`}
                 >
                   {connectingSlugs.has(selectedServer.id) ? (
-                    <><Loader2 className="size-3 animate-spin mr-1" />Working...</>
+                    <>
+                      <Loader2 className="size-3 animate-spin mr-1" />
+                      Working...
+                    </>
                   ) : !selectedServer.isInstallable ? (
                     "Unavailable"
                   ) : connectedSlugs.has(selectedServer.id) ? (
                     "Disconnect"
+                  ) : empId ? (
+                    "Connect Server"
                   ) : (
-                    empId ? "Connect Server" : "Create employee first"
+                    "Create employee first"
                   )}
                 </Button>
               </div>

@@ -181,6 +181,7 @@ export {
   useMcpDeleteMcpConnection,
   useMcpMcpOauthInstall,
   useMcpMcpOauthCallback,
+  useMcpVerifyMcpConnection,
   getMcpListMcpConnectorsQueryKey,
   getMcpListEmployeeMcpConnectionsQueryKey,
   getMcpMcpOauthInstallQueryKey,
@@ -191,6 +192,7 @@ export {
   mcpDeleteMcpConnection,
   mcpMcpOauthInstall,
   mcpMcpOauthCallback,
+  mcpVerifyMcpConnection,
 } from "./api/mcp/mcp";
 
 export type {
@@ -207,6 +209,9 @@ export type {
   McpMcpOauthInstallQueryError,
   McpMcpOauthCallbackQueryResult,
   McpMcpOauthCallbackQueryError,
+  McpVerifyMcpConnectionMutationResult,
+  McpVerifyMcpConnectionMutationBody,
+  McpVerifyMcpConnectionMutationError,
 } from "./api/mcp/mcp";
 
 // Schemas
@@ -235,6 +240,8 @@ export type {
   McpConnectionList,
   McpMcpOauthCallbackParams,
   McpMcpOauthInstallParams,
+  McpVerificationRequest,
+  McpVerificationResponse,
   ScheduleCreate,
   ScheduleUpdate,
   ScheduleResponse,

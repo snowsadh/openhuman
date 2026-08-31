@@ -85,12 +85,13 @@ HR_TEMPLATE = EmployeeTemplate(
         "the team member know you've escalated it and a human will follow up.\n"
         "Use tools when you need information. Don't use tools for simple greetings or opinions."
     ),
-    allowed_tools=_CORE_ALLOWED + [
+    allowed_tools=_CORE_ALLOWED
+    + [
         "escalate_to_human",
         "escalate_to_human_interactive",
     ],
-    allowed_mcp_servers=["gmail", "gamma", "canva", "pitchdeck", "visualization", "notion"],
-    suggested_mcp_servers=["notion", "bamboohr", "rippling"],
+    allowed_mcp_servers=["slack", "gmail", "google-calendar", "notion", "web_search"],
+    suggested_mcp_servers=["slack", "gmail", "google-calendar", "notion", "web_search"],
     guardrail_config={"block_pii": True, "require_citations": False},
     suggested_duties=[
         "Screen resumes shared in the #hiring channel",
@@ -119,12 +120,27 @@ SALES_TEMPLATE = EmployeeTemplate(
         "4. Use Pitch Deck MCP (create_pitch_deck) to generate pitch decks and sales presentations, then create_document for other PDF/PPTX files uploaded to the chat.\n"
         "Use tools when you need information. Don't use tools for simple greetings or opinions."
     ),
-    allowed_tools=_CORE_ALLOWED + [
+    allowed_tools=_CORE_ALLOWED
+    + [
         "escalate_to_human",
         "escalate_to_human_interactive",
     ],
-    allowed_mcp_servers=["web_search", "gmail", "gamma", "canva", "pitchdeck", "visualization"],
-    suggested_mcp_servers=["hubspot", "salesforce", "github"],
+    allowed_mcp_servers=[
+        "slack",
+        "gmail",
+        "google-calendar",
+        "hubspot",
+        "web_search",
+        "canva",
+    ],
+    suggested_mcp_servers=[
+        "slack",
+        "gmail",
+        "google-calendar",
+        "hubspot",
+        "web_search",
+        "canva",
+    ],
     guardrail_config={"block_pii": False, "require_citations": False},
     suggested_duties=[
         "Draft weekly pipeline summaries in the #sales-reports channel",
@@ -149,12 +165,13 @@ SUPPORT_TEMPLATE = EmployeeTemplate(
         "4. Use create_document to save reports and guides as files uploaded to the chat.\n"
         "Use tools when you need information. Don't use tools for simple greetings or opinions."
     ),
-    allowed_tools=_CORE_ALLOWED + [
+    allowed_tools=_CORE_ALLOWED
+    + [
         "escalate_to_human",
         "escalate_to_human_interactive",
     ],
-    allowed_mcp_servers=["web_search", "gmail", "gamma", "canva", "pitchdeck", "visualization"],
-    suggested_mcp_servers=["github", "zendesk", "intercom", "gmail"],
+    allowed_mcp_servers=["slack", "gmail", "zendesk", "notion", "web_search"],
+    suggested_mcp_servers=["slack", "gmail", "zendesk", "notion", "web_search"],
     guardrail_config={"block_pii": True, "require_citations": False},
     suggested_duties=[
         "Answer support questions in #support when mentioned",
@@ -189,12 +206,29 @@ GENERAL_TEMPLATE = EmployeeTemplate(
         "5. Be concise, helpful, and accurate.\n"
         "Use tools when you need information."
     ),
-    allowed_tools=_CORE_ALLOWED + [
+    allowed_tools=_CORE_ALLOWED
+    + [
         "escalate_to_human",
         "escalate_to_human_interactive",
     ],
-    allowed_mcp_servers=["web_search", "gmail", "gamma", "canva", "pitchdeck", "visualization", "figma", "github", "notion", "n8n"],
-    suggested_mcp_servers=["github", "gmail", "figma"],
+    allowed_mcp_servers=[
+        "slack",
+        "google-calendar",
+        "github",
+        "notion",
+        "n8n",
+        "web_search",
+        "canva",
+    ],
+    suggested_mcp_servers=[
+        "slack",
+        "google-calendar",
+        "github",
+        "notion",
+        "n8n",
+        "web_search",
+        "canva",
+    ],
     guardrail_config={"block_pii": False, "require_citations": False},
     suggested_duties=[
         "Answer general questions when mentioned",
@@ -220,12 +254,13 @@ LEGAL_COMPLIANCE_TEMPLATE = EmployeeTemplate(
         "5. Use create_document to save compliance reports as PDF files uploaded to the chat.\n"
         "Use tools when you need information. Don't use tools for simple greetings or opinions."
     ),
-    allowed_tools=_CORE_ALLOWED + [
+    allowed_tools=_CORE_ALLOWED
+    + [
         "escalate_to_human",
         "escalate_to_human_interactive",
     ],
-    allowed_mcp_servers=["web_search", "gmail", "gamma", "canva", "pitchdeck", "visualization"],
-    suggested_mcp_servers=["docusign", "github", "gmail"],
+    allowed_mcp_servers=["slack", "gmail", "notion", "web_search"],
+    suggested_mcp_servers=["slack", "gmail", "notion", "web_search"],
     guardrail_config={"block_pii": True, "require_citations": True},
     suggested_duties=[
         "Review contract clauses shared in #legal-review",
