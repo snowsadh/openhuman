@@ -1,8 +1,10 @@
 # ArmorIQ configuration as code
 
-The five production manifests are the source of truth for OpenHuman's role
-MCP endpoints. Runtime startup validates credentials but never registers or
-changes policy.
+The five production manifests are the source of truth for OpenHuman's live,
+public role MCP endpoints. Runtime startup validates credentials but never
+registers or changes policy. User-authorized SaaS MCPs are added to these
+manifests only after OAuth setup, tool discovery, and an ArmorIQ smoke test;
+until then they remain fail-closed in the marketplace.
 
 Set the API key, MCP bearer token, and role URLs, then run:
 

@@ -11,41 +11,14 @@ proxy:
   max_retries: 3
 mcp_servers:
   - id: openhuman-general
-    url: $ARMORIQ_GENERAL_MCP_URL
+    url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp
     description: OpenHuman governed general response generation
     auth:
       type: bearer
       token: $ARMORIQ_MCP_BEARER_TOKEN
-  - id: slack
-    url: https://mcp.slack.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_SLACK_VALIDATION_TOKEN}
-  - id: google-calendar
-    url: https://calendarmcp.googleapis.com/mcp/v1
-    auth: {type: bearer, token: $ARMORIQ_GOOGLE_CALENDAR_VALIDATION_TOKEN}
-  - id: github
-    url: https://api.githubcopilot.com/mcp/
-    auth: {type: bearer, token: $ARMORIQ_GITHUB_VALIDATION_TOKEN}
-  - id: notion
-    url: https://mcp.notion.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_NOTION_VALIDATION_TOKEN}
-  - id: web_search
-    url: https://rival-search-mcp.fly.dev/mcp
-  - id: n8n
-    url: $ARMORIQ_N8N_RELAY_MCP_URL
-    auth: {type: api_key, api_key: $ARMORIQ_N8N_VALIDATION_CREDENTIAL}
-  - id: canva
-    url: https://mcp.canva.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_CANVA_VALIDATION_TOKEN}
 policy:
   allow:
     - openhuman-general.generate_response
-    - slack.*
-    - google-calendar.*
-    - github.*
-    - notion.*
-    - web_search.*
-    - n8n.*
-    - canva.*
   deny: []
 intent:
   ttl_seconds: 360

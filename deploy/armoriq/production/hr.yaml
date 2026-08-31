@@ -11,34 +11,15 @@ proxy:
   max_retries: 3
 mcp_servers:
   - id: openhuman-hr
-    url: $ARMORIQ_HR_MCP_URL
+    url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp/hr
     description: OpenHuman HR coworker tools with approval boundaries
     auth:
       type: bearer
       token: $ARMORIQ_MCP_BEARER_TOKEN
-  - id: slack
-    url: https://mcp.slack.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_SLACK_VALIDATION_TOKEN}
-  - id: gmail
-    url: https://gmailmcp.googleapis.com/mcp/v1
-    auth: {type: bearer, token: $ARMORIQ_GMAIL_VALIDATION_TOKEN}
-  - id: google-calendar
-    url: https://calendarmcp.googleapis.com/mcp/v1
-    auth: {type: bearer, token: $ARMORIQ_GOOGLE_CALENDAR_VALIDATION_TOKEN}
-  - id: notion
-    url: https://mcp.notion.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_NOTION_VALIDATION_TOKEN}
-  - id: web_search
-    url: https://rival-search-mcp.fly.dev/mcp
 policy:
   allow:
     - openhuman-hr.answer_hr_question
     - openhuman-hr.prepare_pto_request
-    - slack.*
-    - gmail.*
-    - google-calendar.*
-    - notion.*
-    - web_search.*
   deny: []
 intent:
   ttl_seconds: 360

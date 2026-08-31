@@ -11,38 +11,15 @@ proxy:
   max_retries: 3
 mcp_servers:
   - id: openhuman-sales
-    url: $ARMORIQ_SALES_MCP_URL
+    url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp/sales
     description: OpenHuman sales coworker tools with commercial guardrails
     auth:
       type: bearer
       token: $ARMORIQ_MCP_BEARER_TOKEN
-  - id: slack
-    url: https://mcp.slack.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_SLACK_VALIDATION_TOKEN}
-  - id: gmail
-    url: https://gmailmcp.googleapis.com/mcp/v1
-    auth: {type: bearer, token: $ARMORIQ_GMAIL_VALIDATION_TOKEN}
-  - id: google-calendar
-    url: https://calendarmcp.googleapis.com/mcp/v1
-    auth: {type: bearer, token: $ARMORIQ_GOOGLE_CALENDAR_VALIDATION_TOKEN}
-  - id: hubspot
-    url: https://mcp.hubspot.com
-    auth: {type: bearer, token: $ARMORIQ_HUBSPOT_VALIDATION_TOKEN}
-  - id: web_search
-    url: https://rival-search-mcp.fly.dev/mcp
-  - id: canva
-    url: https://mcp.canva.com/mcp
-    auth: {type: bearer, token: $ARMORIQ_CANVA_VALIDATION_TOKEN}
 policy:
   allow:
     - openhuman-sales.draft_sales_response
     - openhuman-sales.prepare_discount_request
-    - slack.*
-    - gmail.*
-    - google-calendar.*
-    - hubspot.*
-    - web_search.*
-    - canva.*
   deny: []
 intent:
   ttl_seconds: 360
