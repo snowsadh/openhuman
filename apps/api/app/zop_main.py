@@ -29,6 +29,7 @@ import app.organizations.models  # noqa: F401
 import app.schedules.models  # noqa: F401
 from app.activity.router import router as activity_router
 from app.agent.tools.mcp.catalog import register_catalog_connectors
+from app.armoriq_runtime import router as armoriq_router
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
 from app.core.config import settings
@@ -40,7 +41,6 @@ from app.mcp.router import oauth_router as mcp_oauth_router
 from app.mcp.router import router as mcp_router
 from app.organizations.router import router as org_router
 from app.zop_agent_router import router as agent_router
-from app.zop_armoriq import router as armoriq_router
 
 logger = logging.getLogger(__name__)
 database_bootstrap_error: dict[str, str] | None = None

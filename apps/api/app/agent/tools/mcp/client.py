@@ -30,7 +30,7 @@ from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from app.activity.service import record_activity_from_context
-from app.agent.armoriq import get_armoriq_client, parse_mcp_tool_name
+from app.agent.armoriq import get_request_armoriq_client, parse_mcp_tool_name
 from app.agent.tools.mcp.connectors.registry import REGISTRY, ConnectorSpec
 from app.agent.tools.mcp.security import validate_connection
 from app.core.config import settings
@@ -365,6 +365,7 @@ class MCPClientManager:
 
         # Load tools per-server so we know which slug each tool belongs to.
         tools: list[BaseTool] = []
+        connections_by_slug = {connection.slug: connection for connection in connections}
         for slug in server_configs:
             cb = _get_circuit_breaker(slug)
             spec = REGISTRY.get(slug)
@@ -398,7 +399,12 @@ class MCPClientManager:
 
                 # Wrap with structured logging + rate limiting + timeout
                 # + circuit-breaker integration.
-                wrapped = self._wrap_tool(renamed, slug, spec)
+                wrapped = self._wrap_tool(
+                    renamed,
+                    slug,
+                    spec,
+                    connections_by_slug.get(slug),
+                )
                 tools.append(wrapped)
 
             # Connection succeeded — reset circuit breaker.
@@ -431,6 +437,7 @@ class MCPClientManager:
         tool: BaseTool,
         slug: str,
         spec: ConnectorSpec | None,
+        connection: ResolvedConnection | None = None,
     ) -> BaseTool:
         """Wrap *tool* with ArmorIQ enforcement and resilience guards.
 
@@ -512,16 +519,34 @@ class MCPClientManager:
             # -- execute through ArmorIQ with timeout + structured logging -
             start = time.monotonic()
             try:
-                result = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        lambda: get_armoriq_client().invoke_with_policy(
+                invocation_client = get_request_armoriq_client(
+                    agent_id=str(configurable.get("armoriq_agent_id") or "openhuman"),
+                    mcp=slug,
+                    credentials=connection.credentials if connection else None,
+                    auth_type=(
+                        connection.auth_type or connection.connector.auth_type
+                        if connection
+                        else None
+                    ),
+                )
+
+                def invoke() -> Any:
+                    try:
+                        return invocation_client.invoke_with_policy(
                             slug,
                             action,
                             token,
                             input,
                             options,
                         )
-                    ),
+                    finally:
+                        # Cached credential-free clients are process-level. Only
+                        # request-scoped credential clients are closed here.
+                        if connection and connection.credentials:
+                            invocation_client.close()
+
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(invoke),
                     timeout=max(
                         timeout,
                         settings.armoriq_approval_timeout_seconds
@@ -558,7 +583,7 @@ class MCPClientManager:
                     metadata={
                         "mcp": slug,
                         "action": action,
-                        "reason": str(exc)[:300],
+                        "reason": getattr(exc, "reason", None) or type(exc).__name__,
                         "plan_hash": token.plan_hash,
                     },
                 )
@@ -580,7 +605,7 @@ class MCPClientManager:
                     metadata={
                         "mcp": slug,
                         "action": action,
-                        "reason": str(exc)[:300],
+                        "reason": type(exc).__name__,
                         "plan_hash": token.plan_hash,
                     },
                 )

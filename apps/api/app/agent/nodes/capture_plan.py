@@ -56,6 +56,8 @@ async def capture_plan_node(state: AgentState, config: RunnableConfig) -> dict[s
             user_email=configurable.get("armoriq_user_email"),
             metadata={
                 "employee_id": configurable.get("employee_id"),
+                "organization_id": configurable.get("org_id"),
+                "agent_id": configurable.get("armoriq_agent_id"),
                 "platform": configurable.get("platform"),
             },
         )

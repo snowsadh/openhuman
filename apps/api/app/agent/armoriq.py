@@ -12,6 +12,21 @@ from app.core.config import settings
 
 _token_lock = threading.Lock()
 
+_ROLE_AGENT_IDS = {
+    "hr": "openhuman-hr",
+    "sales": "openhuman-sales",
+    "support": "openhuman-support",
+    "legal-compliance": "openhuman-legal",
+    "legal_compliance": "openhuman-legal",
+    "legal": "openhuman-legal",
+}
+
+
+def agent_id_for_employee_kind(employee_kind: str | None) -> str:
+    """Return the stable ArmorIQ agent identity for an employee role."""
+    normalized = (employee_kind or "").strip().lower().replace(" ", "_")
+    return _ROLE_AGENT_IDS.get(normalized, "openhuman")
+
 
 def parse_mcp_tool_name(tool_name: str) -> tuple[str, str] | None:
     """Map ``mcp__server__action`` to ArmorIQ's MCP/action pair."""
@@ -28,6 +43,34 @@ def get_armoriq_client(agent_id: str = "openhuman") -> ArmorIQClient:
         api_key=settings.armoriq_api_key,
         agent_id=agent_id,
         timeout=float(settings.armoriq_request_timeout_seconds),
+    )
+
+
+def get_request_armoriq_client(
+    *,
+    agent_id: str,
+    mcp: str,
+    credentials: str | None,
+    auth_type: str | None = None,
+) -> ArmorIQClient:
+    """Create a request-scoped client containing only one MCP credential.
+
+    The process-level client remains responsible for plan capture. Credentialed
+    execution clients are deliberately not cached so one organization or user
+    can never inherit another connection's token mapping.
+    """
+    if not credentials:
+        return get_armoriq_client(agent_id=agent_id)
+    credential_mapping: dict[str, str]
+    if auth_type in {"api_key", "api_key_header"}:
+        credential_mapping = {"authType": "api_key", "apiKey": credentials}
+    else:
+        credential_mapping = {"authType": "bearer", "token": credentials}
+    return ArmorIQClient(
+        api_key=settings.armoriq_api_key,
+        agent_id=agent_id,
+        timeout=float(settings.armoriq_request_timeout_seconds),
+        mcp_credentials={mcp: credential_mapping},
     )
 
 

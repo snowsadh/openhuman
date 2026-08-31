@@ -11,6 +11,7 @@ from armoriq_sdk.exceptions import PolicyBlockedException, PolicyHoldException
 from armoriq_sdk.models import IntentToken
 from langchain_core.tools import StructuredTool
 
+from app.agent.armoriq import get_request_armoriq_client
 from app.agent.tools.mcp.client import MCPClientManager, _get_circuit_breaker
 
 
@@ -55,6 +56,23 @@ async def _run_inline(function, *args):  # type: ignore[no-untyped-def]
     return function(*args)
 
 
+def test_request_client_contains_only_selected_mcp_credential() -> None:
+    with patch("app.agent.armoriq.ArmorIQClient") as constructor:
+        get_request_armoriq_client(
+            agent_id="openhuman-sales",
+            mcp="hubspot",
+            credentials="oauth-token",
+            auth_type="oauth2",
+        )
+
+    constructor.assert_called_once()
+    kwargs = constructor.call_args.kwargs
+    assert kwargs["agent_id"] == "openhuman-sales"
+    assert kwargs["mcp_credentials"] == {
+        "hubspot": {"authType": "bearer", "token": "oauth-token"}
+    }
+
+
 @pytest.mark.asyncio
 async def test_allowed_call_executes_once_through_armoriq() -> None:
     original_calls: list[dict] = []
@@ -63,7 +81,10 @@ async def test_allowed_call_executes_once_through_armoriq() -> None:
     client.invoke_with_policy.return_value = SimpleNamespace(result="ArmorIQ executed it")
 
     with (
-        patch("app.agent.tools.mcp.client.get_armoriq_client", return_value=client),
+        patch(
+            "app.agent.tools.mcp.client.get_request_armoriq_client",
+            return_value=client,
+        ),
         patch(
             "app.agent.tools.mcp.client.record_activity_from_context",
             new=AsyncMock(),
@@ -108,7 +129,10 @@ async def test_held_or_blocked_call_never_reaches_original_mcp(
     failures_before = circuit.failure_count
 
     with (
-        patch("app.agent.tools.mcp.client.get_armoriq_client", return_value=client),
+        patch(
+            "app.agent.tools.mcp.client.get_request_armoriq_client",
+            return_value=client,
+        ),
         patch(
             "app.agent.tools.mcp.client.record_activity_from_context",
             new=AsyncMock(),

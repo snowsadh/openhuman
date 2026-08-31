@@ -30,6 +30,10 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
                 "draft_support_response",
                 "prepare_refund_request",
             ],
+            zop_armoriq.LEGAL_MCP_SLUG: [
+                "review_legal_question",
+                "prepare_legal_document_share",
+            ],
         }
         for server_slug, tool_names in expected.items():
             response = await zop_armoriq._handle_mcp_request(
@@ -43,7 +47,7 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
 
     async def test_status_reports_role_servers_and_default_deny(self) -> None:
         with patch(
-            "app.zop_armoriq.ensure_openhuman_mcp_registered",
+            "app.zop_armoriq.ensure_armoriq_runtime_ready",
             new=AsyncMock(),
         ):
             response = await zop_armoriq.armoriq_status()
@@ -57,6 +61,7 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
                 zop_armoriq.HR_MCP_SLUG,
                 zop_armoriq.SALES_MCP_SLUG,
                 zop_armoriq.SUPPORT_MCP_SLUG,
+                zop_armoriq.LEGAL_MCP_SLUG,
             },
         )
 
@@ -110,7 +115,7 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "app.zop_armoriq.ensure_openhuman_mcp_registered",
+                "app.zop_armoriq.ensure_armoriq_runtime_ready",
                 new=AsyncMock(),
             ),
             patch("app.zop_armoriq.get_armoriq_client", return_value=client) as client_factory,

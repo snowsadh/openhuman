@@ -20,6 +20,7 @@ from app.activity.context import (
     activity_platform,
 )
 from app.activity.service import record_activity
+from app.agent.armoriq import agent_id_for_employee_kind
 from app.agent.build import build_graph
 from app.agent.schemas import AgentResponse, MessageInput
 from app.agent.tools.executor import BUILT_IN_TOOLS
@@ -246,6 +247,10 @@ async def run_agent(
             "platform": data.platform,
             "channel_id": data.channel_id,
             "armoriq_user_email": _current_user.email,
+            "armoriq_agent_id": agent_id_for_employee_kind(
+                authorized_employee.employee_type
+            ),
+            "org_id": str(authorized_employee.org_id),
         }
     }
 

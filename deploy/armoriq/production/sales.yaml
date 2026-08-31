@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://docs.armoriq.ai/schemas/armoriq.schema.json
+version: v1
+identity:
+  api_key: $ARMORIQ_API_KEY
+  user_id: openhuman-service
+  agent_id: openhuman-sales
+environment: production
+proxy:
+  url: https://proxy.armoriq.ai
+  timeout: 30
+  max_retries: 3
+mcp_servers:
+  - id: openhuman-sales
+    url: $ARMORIQ_SALES_MCP_URL
+    description: OpenHuman sales coworker tools with commercial guardrails
+    auth:
+      type: bearer
+      token: $ARMORIQ_MCP_BEARER_TOKEN
+policy:
+  allow:
+    - openhuman-sales.draft_sales_response
+  deny:
+    - openhuman-sales.prepare_discount_request
+intent:
+  ttl_seconds: 360
+  require_csrg: true

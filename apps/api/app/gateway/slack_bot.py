@@ -33,6 +33,7 @@ from app.activity.context import (
     activity_platform,
 )
 from app.activity.service import record_activity
+from app.agent.armoriq import agent_id_for_employee_kind
 from app.agent.jobs.queue import cancel_active_jobs_for_thread, is_cancel_intent
 from app.agent.router import get_graph_for_employee
 from app.channel_assignments.models import ChannelAssignment
@@ -902,6 +903,7 @@ class EmployeeSlackBot(BaseSlackBot):
 
         try:
             async with async_session_factory() as session:
+                employee = await session.get(Employee, self.employee_id)
                 graph, all_tools = await get_graph_for_employee(
                     session,
                     self.employee_id,
@@ -916,6 +918,10 @@ class EmployeeSlackBot(BaseSlackBot):
                         "channel_id": channel_id,
                         "thread_ts": thread_ts,
                         "armoriq_user_email": user_email,
+                        "armoriq_agent_id": agent_id_for_employee_kind(
+                            employee.employee_type if employee else None
+                        ),
+                        "org_id": str(employee.org_id) if employee else None,
                     }
                 }
                 result = await graph.ainvoke(initial_state, config=config)
@@ -1139,6 +1145,7 @@ class WorkspaceSlackBot(BaseSlackBot):
 
         try:
             async with async_session_factory() as session:
+                employee = await session.get(Employee, employee_id)
                 graph, all_tools = await get_graph_for_employee(
                     session,
                     employee_id,
@@ -1153,6 +1160,10 @@ class WorkspaceSlackBot(BaseSlackBot):
                         "channel_id": channel_id,
                         "thread_ts": thread_ts,
                         "armoriq_user_email": user_email,
+                        "armoriq_agent_id": agent_id_for_employee_kind(
+                            employee.employee_type if employee else None
+                        ),
+                        "org_id": str(employee.org_id) if employee else None,
                     }
                 }
                 result = await graph.ainvoke(initial_state, config=config)

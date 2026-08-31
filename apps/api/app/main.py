@@ -25,8 +25,9 @@ import app.agent.tools.mcp.models  # noqa: F401
 import app.schedules.models  # noqa: F401
 from app.activity.router import router as activity_router
 from app.agent.checkpointer import close_checkpointer, init_checkpointer
-from app.agent.router import router as agent_router
 from app.agent.jobs.worker import AgentJobWorker, set_active_worker
+from app.agent.router import router as agent_router
+from app.armoriq_runtime import router as armoriq_router
 from app.auth.router import router as auth_router
 from app.channel_assignments.router import router as ca_router
 from app.core.config import settings
@@ -168,6 +169,7 @@ app.include_router(emp_router)
 app.include_router(ca_router)
 app.include_router(doc_router)
 app.include_router(agent_router)
+app.include_router(armoriq_router)
 app.include_router(memory_router)
 app.include_router(slack_oauth_router)
 app.include_router(fixed_bots_router)

@@ -1,0 +1,42 @@
+name: Validate and register ArmorIQ agents
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/armoriq/**"
+      - ".github/workflows/armoriq-register.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      ARMORIQ_API_KEY: ${{ secrets.ARMORIQ_API_KEY }}
+      ARMORIQ_MCP_BEARER_TOKEN: ${{ secrets.ARMORIQ_MCP_BEARER_TOKEN }}
+      ARMORIQ_GENERAL_MCP_URL: ${{ vars.ARMORIQ_GENERAL_MCP_URL }}
+      ARMORIQ_HR_MCP_URL: ${{ vars.ARMORIQ_HR_MCP_URL }}
+      ARMORIQ_SALES_MCP_URL: ${{ vars.ARMORIQ_SALES_MCP_URL }}
+      ARMORIQ_SUPPORT_MCP_URL: ${{ vars.ARMORIQ_SUPPORT_MCP_URL }}
+      ARMORIQ_LEGAL_MCP_URL: ${{ vars.ARMORIQ_LEGAL_MCP_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+      - name: Install pinned ArmorIQ CLI
+        run: pip install "armoriq-sdk==0.6.9"
+      - name: Validate and register production agents
+        shell: bash
+        run: |
+          set -euo pipefail
+          for config in deploy/armoriq/production/*.yaml; do
+            armoriq validate --config "$config"
+            armoriq register --config "$config"
+          done

@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://docs.armoriq.ai/schemas/armoriq.schema.json
+version: v1
+identity:
+  api_key: $ARMORIQ_API_KEY
+  user_id: openhuman-service
+  agent_id: openhuman-support
+environment: production
+proxy:
+  url: https://proxy.armoriq.ai
+  timeout: 30
+  max_retries: 3
+mcp_servers:
+  - id: openhuman-support
+    url: $ARMORIQ_SUPPORT_MCP_URL
+    description: OpenHuman customer-support tools with refund guardrails
+    auth:
+      type: bearer
+      token: $ARMORIQ_MCP_BEARER_TOKEN
+policy:
+  allow:
+    - openhuman-support.draft_support_response
+  deny:
+    - openhuman-support.prepare_refund_request
+intent:
+  ttl_seconds: 360
+  require_csrg: true
