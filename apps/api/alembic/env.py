@@ -29,8 +29,10 @@ import app.governance.models  # noqa: F401, E402
 # this is the Alembic Config object
 config = context.config
 
-# Override the placeholder URL in alembic.ini with our settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# ConfigParser uses percent signs for interpolation. Database URLs contain
+# percent-encoded passwords in production, so escape them only while storing
+# the URL in Alembic's config; get_main_option returns the original URL.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:
