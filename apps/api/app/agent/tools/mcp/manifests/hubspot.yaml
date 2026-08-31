@@ -1,0 +1,21 @@
+manifest_version: 1
+name: hubspot
+description: HubSpot MCP — read CRM context and perform governed record and activity updates
+source: https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server
+
+transport:
+  type: streamable_http
+  url: https://mcp.hubspot.com
+
+auth:
+  type: oauth2
+  scopes: []
+  token_auth_method: basic
+  supports_refresh: true
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0

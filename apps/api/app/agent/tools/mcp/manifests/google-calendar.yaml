@@ -1,0 +1,35 @@
+manifest_version: 1
+name: google-calendar
+description: Google Calendar MCP — calendars, availability, events, and governed scheduling
+source: https://developers.google.com/workspace/calendar/api/guides/configure-mcp-server
+
+transport:
+  type: streamable_http
+  url: https://calendarmcp.googleapis.com/mcp/v1
+
+auth:
+  type: oauth2
+  authorize_url: https://accounts.google.com/o/oauth2/v2/auth
+  token_url: https://oauth2.googleapis.com/token
+  scopes:
+    - https://www.googleapis.com/auth/calendar.calendarlist.readonly
+    - https://www.googleapis.com/auth/calendar.events.freebusy
+    - https://www.googleapis.com/auth/calendar.events
+  token_auth_method: form
+  supports_refresh: true
+
+tools:
+  default_allow:
+    - create_event
+    - delete_event
+    - get_event
+    - list_calendars
+    - list_events
+    - respond_to_event
+    - search_events
+    - suggest_time
+    - update_event
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0

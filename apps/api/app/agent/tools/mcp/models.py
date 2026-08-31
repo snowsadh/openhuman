@@ -6,10 +6,10 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     ForeignKey,
-    JSON,
     String,
     Text,
     Uuid,
@@ -26,6 +26,10 @@ class McpConnection(Base):
         CheckConstraint(
             "status IN ('connected', 'error', 'revoked')",
             name="ck_mcp_connections_status",
+        ),
+        CheckConstraint(
+            "verification_status IN ('unverified', 'discovered', 'verified', 'error')",
+            name="ck_mcp_connections_verification_status",
         ),
     )
 
@@ -68,6 +72,22 @@ class McpConnection(Base):
     )
 
     status: Mapped[str] = mapped_column(String(50), default="connected", server_default="connected")
+    verification_status: Mapped[str] = mapped_column(
+        String(50), default="unverified", server_default="unverified"
+    )
+    discovered_tools: Mapped[list | None] = mapped_column(
+        JSON, nullable=True, comment="Sanitized tools/list inventory returned by the MCP server"
+    )
+    discovered_tool_count: Mapped[int] = mapped_column(default=0, server_default="0")
+    verification_error: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="Actionable, credential-free verification failure"
+    )
+    last_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    oauth_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     connected_by_user_id: Mapped[UUID | None] = mapped_column(
         Uuid,

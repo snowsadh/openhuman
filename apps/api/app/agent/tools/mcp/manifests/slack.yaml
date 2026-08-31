@@ -1,0 +1,30 @@
+manifest_version: 1
+name: slack
+description: Slack MCP — search and read conversations, and perform governed workspace actions
+source: https://api.slack.com/mcp
+
+transport:
+  type: streamable_http
+  url: https://mcp.slack.com/mcp
+
+auth:
+  type: oauth2
+  authorize_url: https://slack.com/oauth/v2_user/authorize
+  token_url: https://slack.com/api/oauth.v2.user.access
+  scopes:
+    - channels:history
+    - channels:read
+    - groups:history
+    - groups:read
+    - search:read
+    - chat:write
+  token_auth_method: basic
+  supports_refresh: true
+
+tools:
+  default_allow: null
+  default_deny: []
+
+settings:
+  request_timeout_seconds: 30.0
+  rate_limit_per_minute: 50

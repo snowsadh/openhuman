@@ -20,6 +20,8 @@ class ConnectorStatus(BaseModel):
     requires_custom_server_url: bool = False
     is_connected: bool = False
     connection_count: int = 0
+    verified_connection_count: int = 0
+    verification_status: str = "unverified"
 
 
 class McpConnectionRead(BaseModel):
@@ -30,6 +32,12 @@ class McpConnectionRead(BaseModel):
     auth_type: str
     scopes: list | None = None
     status: str
+    verification_status: str = "unverified"
+    discovered_tools: list | None = None
+    discovered_tool_count: int = 0
+    verification_error: str | None = None
+    last_verified_at: datetime | None = None
+    oauth_expires_at: datetime | None = None
     is_org_wide: bool = False
     last_used_at: datetime | None = None
     created_at: datetime
@@ -47,7 +55,10 @@ class McpConnectionCreate(BaseModel):
     )
     server_url: str | None = Field(
         default=None,
-        description="Optional per-connection MCP server URL for connectors that require an org-specific endpoint",
+        description=(
+            "Optional per-connection MCP server URL for connectors that require "
+            "an org-specific endpoint"
+        ),
     )
     scopes: list[str] | None = None
     org_wide: bool = Field(
@@ -75,6 +86,26 @@ class CatalogEntryRead(BaseModel):
     docs_url: str = ""
     is_hardcoded: bool = False
     is_installed: bool = False
+    catalog_state: str = "setup_required"
+    is_installable: bool = True
+    verification_status: str = "unverified"
+
+
+class McpVerificationRequest(BaseModel):
+    """Verify discovery and optionally run one real read tool through ArmorIQ."""
+
+    probe_tool: str | None = Field(
+        default=None,
+        description="Exact discovered tool name to invoke after tools/list succeeds",
+    )
+    probe_parameters: dict = Field(default_factory=dict)
+
+
+class McpVerificationResponse(BaseModel):
+    connection: McpConnectionRead
+    discovered_tools: list[str]
+    probe_executed: bool = False
+    message: str
 
 
 class CatalogList(BaseModel):

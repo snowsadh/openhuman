@@ -1,0 +1,25 @@
+manifest_version: 1
+name: zendesk
+description: OpenHuman Zendesk adapter — narrow ticket, user, and help-center access over Zendesk APIs
+source: https://developer.zendesk.com/api-reference/
+
+transport:
+  type: streamable_http
+
+auth:
+  type: api_key_header
+  supports_refresh: false
+
+tools:
+  default_allow:
+    - get_ticket
+    - search_tickets
+    - get_user
+    - search_help_center
+    - reply_to_ticket
+    - update_ticket_status
+  default_deny: []
+
+settings:
+  requires_custom_server_url: true
+  request_timeout_seconds: 30.0

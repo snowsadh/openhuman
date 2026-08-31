@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from datetime import UTC, datetime
 from urllib.parse import quote_plus, urlparse
 from uuid import UUID
 
@@ -12,12 +14,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.activity.service import record_activity
+from app.agent.armoriq import agent_id_for_employee_kind, mint_intent_token
 from app.agent.tools.mcp.catalog import (
-    list_catalog,
+    build_connector_spec,
     get_catalog_entry,
     is_hardcoded,
-    build_connector_spec,
+    list_catalog,
 )
+from app.agent.tools.mcp.client import MCPClientManager, ResolvedConnection
 from app.agent.tools.mcp.connectors import REGISTRY
 from app.agent.tools.mcp.models import McpConnection
 from app.agent.tools.mcp.security import validate_connector_config
@@ -25,7 +29,7 @@ from app.auth.models import User
 from app.core.config import settings
 from app.core.database import async_session_factory, get_db
 from app.core.dependencies import get_current_user
-from app.core.security import encrypt_token
+from app.core.security import decrypt_token, encrypt_token
 from app.employees.models import Employee
 from app.mcp.oauth import (
     _decode_oauth_state,
@@ -41,9 +45,58 @@ from app.mcp.schemas import (
     McpConnectionCreate,
     McpConnectionList,
     McpConnectionRead,
+    McpVerificationRequest,
+    McpVerificationResponse,
 )
+from app.organizations.models import Organization
 
 logger = logging.getLogger(__name__)
+
+
+def _connection_read(connection: McpConnection) -> McpConnectionRead:
+    return McpConnectionRead(
+        id=connection.id,
+        connector_slug=connection.connector_slug,
+        auth_type=connection.auth_type,
+        scopes=connection.scopes,
+        status=connection.status,
+        verification_status=connection.verification_status,
+        discovered_tools=connection.discovered_tools,
+        discovered_tool_count=connection.discovered_tool_count,
+        verification_error=connection.verification_error,
+        last_verified_at=connection.last_verified_at,
+        oauth_expires_at=connection.oauth_expires_at,
+        is_org_wide=connection.employee_id is None,
+        last_used_at=connection.last_used_at,
+        created_at=connection.created_at,
+    )
+
+
+async def _require_owned_employee(
+    db: AsyncSession,
+    org_id: UUID,
+    emp_id: UUID,
+    user: User,
+) -> Employee:
+    employee = await db.scalar(
+        select(Employee)
+        .join(Organization, Organization.id == Employee.org_id)
+        .where(
+            Employee.id == emp_id,
+            Employee.org_id == org_id,
+            Organization.owner_id == user.id,
+        )
+    )
+    if employee is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    return employee
+
+
+def _safe_verification_error(exc: Exception, credential: str | None) -> str:
+    detail = str(exc).strip().replace("\n", " ")[:300]
+    if credential:
+        detail = detail.replace(credential, "[REDACTED]")
+    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
 
 
 def _normalize_server_url(server_url: str | None) -> str | None:
@@ -85,6 +138,14 @@ async def list_mcp_connectors(
     """Return every connector in the registry with its connection count
     for this organization."""
     # Count connections per slug for this org
+    organization = await db.scalar(
+        select(Organization).where(
+            Organization.id == org_id, Organization.owner_id == _current_user.id
+        )
+    )
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
     result = await db.execute(
         select(
             McpConnection.connector_slug,
@@ -107,6 +168,17 @@ async def list_mcp_connectors(
     for row in result2:
         counts[row.connector_slug] = counts.get(row.connector_slug, 0) + 1
 
+    verified_result = await db.execute(
+        select(McpConnection.connector_slug).where(
+            McpConnection.org_id == org_id,
+            McpConnection.status == "connected",
+            McpConnection.verification_status == "verified",
+        )
+    )
+    verified_counts: dict[str, int] = {}
+    for row in verified_result:
+        verified_counts[row.connector_slug] = verified_counts.get(row.connector_slug, 0) + 1
+
     output: list[ConnectorStatus] = []
     for slug, spec in REGISTRY.items():
         auth_types = [spec.auth_type] + [
@@ -123,6 +195,8 @@ async def list_mcp_connectors(
                 requires_custom_server_url=spec.requires_custom_server_url,
                 is_connected=slug in connected_slugs,
                 connection_count=counts.get(slug, 0),
+                verified_connection_count=verified_counts.get(slug, 0),
+                verification_status=("verified" if verified_counts.get(slug, 0) else "unverified"),
             )
         )
 
@@ -145,6 +219,7 @@ async def list_employee_mcp_connections(
     _current_user: User = Depends(get_current_user),
 ) -> McpConnectionList:
     """List active MCP connections available to *emp_id* (theirs + org-wide)."""
+    await _require_owned_employee(db, org_id, emp_id, _current_user)
     result = await db.execute(
         select(McpConnection).where(
             McpConnection.org_id == org_id,
@@ -156,18 +231,7 @@ async def list_employee_mcp_connections(
 
     connections: list[McpConnectionRead] = []
     for row in rows:
-        connections.append(
-            McpConnectionRead(
-                id=row.id,
-                connector_slug=row.connector_slug,
-                auth_type=row.auth_type,
-                scopes=row.scopes,
-                status=row.status,
-                is_org_wide=row.employee_id is None,
-                last_used_at=row.last_used_at,
-                created_at=row.created_at,
-            )
-        )
+        connections.append(_connection_read(row))
 
     return McpConnectionList(connections=connections)
 
@@ -189,6 +253,8 @@ async def create_mcp_connection(
 
     The credential is encrypted at rest via AES-256-GCM.
     """
+    await _require_owned_employee(db, org_id, emp_id, _current_user)
+
     # Validate connector slug
     spec = REGISTRY.get(slug)
     if spec is None:
@@ -288,6 +354,11 @@ async def create_mcp_connection(
         existing.server_url = normalized_server_url
         existing.scopes = data.scopes
         existing.status = "connected"
+        existing.verification_status = "unverified"
+        existing.discovered_tools = None
+        existing.discovered_tool_count = 0
+        existing.verification_error = None
+        existing.last_verified_at = None
         conn = existing
         is_new = False
     else:
@@ -337,16 +408,132 @@ async def create_mcp_connection(
     except Exception:
         pass
 
-    return McpConnectionRead(
-        id=conn.id,
-        connector_slug=conn.connector_slug,
-        auth_type=conn.auth_type,
-        scopes=conn.scopes,
-        status=conn.status,
-        is_org_wide=conn.employee_id is None,
-        last_used_at=conn.last_used_at,
-        created_at=conn.created_at,
+    return _connection_read(conn)
+
+
+@router.post(
+    "/employees/{emp_id}/mcp-connections/{slug}/verify",
+    response_model=McpVerificationResponse,
+)
+async def verify_mcp_connection(
+    org_id: UUID,
+    emp_id: UUID,
+    slug: str,
+    data: McpVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> McpVerificationResponse:
+    """Run tools/list and, when requested, one exact read call through ArmorIQ.
+
+    Discovery alone produces ``discovered``. A connector becomes ``verified``
+    only after the selected tool executes through the signed intent boundary.
+    """
+    employee = await _require_owned_employee(db, org_id, emp_id, current_user)
+    connection = await db.scalar(
+        select(McpConnection).where(
+            McpConnection.org_id == org_id,
+            McpConnection.connector_slug == slug,
+            McpConnection.status == "connected",
+            ((McpConnection.employee_id == emp_id) | (McpConnection.employee_id.is_(None))),
+        )
     )
+    spec = REGISTRY.get(slug)
+    if connection is None or spec is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+
+    credential: str | None = None
+    manager = MCPClientManager()
+    try:
+        if connection.credentials_enc:
+            credential = decrypt_token(connection.credentials_enc)
+        resolved = ResolvedConnection(
+            slug=slug,
+            connector=spec,
+            credentials=credential,
+            auth_type=connection.auth_type,
+            server_url=connection.server_url,
+        )
+        tools = await manager.connect([resolved])
+        discovered = sorted(tool.name.split("__", 2)[-1] for tool in tools)
+        if not discovered:
+            raise RuntimeError("MCP server returned no usable tools from tools/list")
+
+        connection.discovered_tools = discovered
+        connection.discovered_tool_count = len(discovered)
+        connection.last_verified_at = datetime.now(UTC)
+        connection.verification_error = None
+        connection.verification_status = "discovered"
+        probe_executed = False
+
+        if data.probe_tool:
+            prefixed_name = f"mcp__{slug}__{data.probe_tool}"
+            tool = next(
+                (item for item in tools if item.name in {data.probe_tool, prefixed_name}),
+                None,
+            )
+            if tool is None:
+                raise ValueError(f"Probe tool '{data.probe_tool}' was not returned by tools/list")
+            token = await asyncio.to_thread(
+                mint_intent_token,
+                prompt=f"Verify read-only {slug}.{data.probe_tool} connection",
+                steps=[
+                    {
+                        "mcp": slug,
+                        "action": data.probe_tool,
+                        "tool": data.probe_tool,
+                        "params": data.probe_parameters,
+                        "description": f"Verify {slug}.{data.probe_tool}",
+                    }
+                ],
+                user_email=current_user.email,
+                metadata={
+                    "employee_id": str(emp_id),
+                    "organization_id": str(org_id),
+                    "agent_id": agent_id_for_employee_kind(employee.employee_type),
+                    "platform": "mcp-verification",
+                },
+            )
+            await tool.ainvoke(
+                data.probe_parameters,
+                config={
+                    "configurable": {
+                        "armoriq_intent_token": token.model_dump(mode="json"),
+                        "armoriq_user_email": current_user.email,
+                        "armoriq_agent_id": agent_id_for_employee_kind(employee.employee_type),
+                        "employee_id": str(emp_id),
+                        "org_id": str(org_id),
+                        "platform": "mcp-verification",
+                    }
+                },
+            )
+            connection.verification_status = "verified"
+            probe_executed = True
+
+        await db.commit()
+        await db.refresh(connection)
+        return McpVerificationResponse(
+            connection=_connection_read(connection),
+            discovered_tools=discovered,
+            probe_executed=probe_executed,
+            message=(
+                "Verified through ArmorIQ"
+                if probe_executed
+                else "Tool discovery succeeded; run a read probe to verify execution"
+            ),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        connection.verification_status = "error"
+        connection.verification_error = _safe_verification_error(exc, credential)
+        connection.last_verified_at = datetime.now(UTC)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"slug": slug, "verification_error": connection.verification_error},
+        ) from exc
+    finally:
+        await manager.disconnect()
 
 
 @router.delete(
@@ -365,6 +552,7 @@ async def delete_mcp_connection(
     The row is kept for audit purposes; credentials are not removed but
     will no longer be resolved.
     """
+    await _require_owned_employee(db, org_id, emp_id, _current_user)
     conn = await db.scalar(
         select(McpConnection).where(
             McpConnection.org_id == org_id,
@@ -380,6 +568,7 @@ async def delete_mcp_connection(
         )
 
     conn.status = "revoked"
+    conn.verification_status = "unverified"
     await db.commit()
 
     logger.info(
@@ -428,15 +617,11 @@ async def mcp_oauth_install(
     client_id: str | None = Query(
         None, description="Override OAuth client_id (for connectors without hardcoded credentials)"
     ),
-    client_secret: str | None = Query(
-        None, description="Override OAuth client_secret"
-    ),
+    client_secret: str | None = Query(None, description="Override OAuth client_secret"),
     authorize_url: str | None = Query(
         None, description="Override OAuth authorize_url (for connectors without hardcoded URLs)"
     ),
-    token_url: str | None = Query(
-        None, description="Override OAuth token_url"
-    ),
+    token_url: str | None = Query(None, description="Override OAuth token_url"),
     db: AsyncSession = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> RedirectResponse:
@@ -468,7 +653,8 @@ async def mcp_oauth_install(
             detail=(
                 f"Connector '{slug}' does not support OAuth (no authorize_url "
                 "configured in its spec). "
-                "Pass authorize_url and client_id as query params, or use a paste-friendly auth method."
+                "Pass authorize_url and client_id as query params, or use a "
+                "paste-friendly auth method."
             ),
         )
 
@@ -488,7 +674,10 @@ async def mcp_oauth_install(
     # -- Build & redirect -----------------------------------------------------
     try:
         auth_url = build_authorize_url(
-            spec, emp_id, org_id, redirect_to,
+            spec,
+            emp_id,
+            org_id,
+            redirect_to,
             override_authorize_url=effective_authorize,
             override_token_url=effective_token,
             override_client_id=client_id,
@@ -605,7 +794,9 @@ async def mcp_oauth_callback(
     # -- 3. Exchange the code for tokens --------------------------------------
     try:
         token_data = await exchange_code(
-            spec, code, code_verifier=code_verifier,
+            spec,
+            code,
+            code_verifier=code_verifier,
             override_token_url=oauth_token_url,
             override_client_id=oauth_client_id,
             override_client_secret=oauth_client_secret,
@@ -660,6 +851,11 @@ async def mcp_oauth_callback(
             existing.auth_type = "oauth2"
             existing.scopes = granted_scopes or spec.default_scopes
             existing.status = "connected"
+            existing.verification_status = "unverified"
+            existing.discovered_tools = None
+            existing.discovered_tool_count = 0
+            existing.verification_error = None
+            existing.last_verified_at = None
         else:
             conn = McpConnection(
                 org_id=UUID(org_id),
@@ -720,13 +916,26 @@ async def list_catalog_entries(
     _current_user: User = Depends(get_current_user),
 ) -> CatalogList:
     """Return every catalog entry with its install status for this org."""
+    organization = await db.scalar(
+        select(Organization).where(
+            Organization.id == org_id, Organization.owner_id == _current_user.id
+        )
+    )
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
     result = await db.execute(
-        select(McpConnection.connector_slug).where(
+        select(
+            McpConnection.connector_slug,
+            McpConnection.verification_status,
+        ).where(
             McpConnection.org_id == org_id,
             McpConnection.status == "connected",
         )
     )
-    connected_slugs: set[str] = {row.connector_slug for row in result}
+    connection_states: dict[str, str] = {
+        row.connector_slug: row.verification_status for row in result
+    }
 
     entries: list[CatalogEntryRead] = []
     for entry in list_catalog():
@@ -739,7 +948,10 @@ async def list_catalog_entries(
                 auth_type=entry.auth_type,
                 docs_url=entry.docs_url,
                 is_hardcoded=is_hardcoded(entry.slug),
-                is_installed=entry.slug in REGISTRY and entry.slug in connected_slugs,
+                is_installed=entry.slug in REGISTRY and entry.slug in connection_states,
+                catalog_state=entry.catalog_state,
+                is_installable=entry.is_installable,
+                verification_status=connection_states.get(entry.slug, "unverified"),
             )
         )
 
@@ -770,6 +982,16 @@ async def install_catalog_entry(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Unknown catalog entry: {slug}",
         )
+    if not entry.is_installable:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Catalog entry '{slug}' is {entry.catalog_state} and cannot be installed "
+                "until its endpoint, authentication, and tools are verified."
+            ),
+        )
+
+    await _require_owned_employee(db, org_id, emp_id, _current_user)
 
     if slug not in REGISTRY:
         spec = build_connector_spec(entry)
@@ -813,6 +1035,11 @@ async def install_catalog_entry(
                 existing.credentials_enc = encrypted
             existing.server_url = normalized_server_url
             existing.status = "connected"
+            existing.verification_status = "unverified"
+            existing.discovered_tools = None
+            existing.discovered_tool_count = 0
+            existing.verification_error = None
+            existing.last_verified_at = None
             conn = existing
         else:
             conn = McpConnection(
@@ -832,16 +1059,7 @@ async def install_catalog_entry(
 
         logger.info("Installed catalog MCP '%s' for employee %s (org %s)", slug, emp_id, org_id)
 
-        return McpConnectionRead(
-            id=conn.id,
-            connector_slug=conn.connector_slug,
-            auth_type=conn.auth_type,
-            scopes=conn.scopes,
-            status=conn.status,
-            is_org_wide=conn.employee_id is None,
-            last_used_at=conn.last_used_at,
-            created_at=conn.created_at,
-        )
+        return _connection_read(conn)
 
     # OAuth2 — redirect to the OAuth install flow
     if auth_type == "oauth2":
@@ -851,8 +1069,10 @@ async def install_catalog_entry(
                 detail=f"Catalog entry '{slug}' has no OAuth authorize URL configured",
             )
         from app.mcp.oauth import build_authorize_url as build_oauth_url
+
         auth_url = build_oauth_url(spec, emp_id, org_id, None)
         from fastapi.responses import RedirectResponse
+
         return RedirectResponse(auth_url, status_code=303)
 
     raise HTTPException(

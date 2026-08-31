@@ -102,6 +102,7 @@ async def _resolve_mcp_tools(
         select(McpConnection).where(
             McpConnection.org_id == org_id,
             McpConnection.status == "connected",
+            McpConnection.verification_status == "verified",
             ((McpConnection.employee_id == employee_id) | (McpConnection.employee_id.is_(None))),
         )
     )
@@ -247,9 +248,7 @@ async def run_agent(
             "platform": data.platform,
             "channel_id": data.channel_id,
             "armoriq_user_email": _current_user.email,
-            "armoriq_agent_id": agent_id_for_employee_kind(
-                authorized_employee.employee_type
-            ),
+            "armoriq_agent_id": agent_id_for_employee_kind(authorized_employee.employee_type),
             "org_id": str(authorized_employee.org_id),
         }
     }

@@ -16,10 +16,29 @@ mcp_servers:
     auth:
       type: bearer
       token: $ARMORIQ_MCP_BEARER_TOKEN
+  - id: slack
+    url: https://mcp.slack.com/mcp
+    auth: {type: bearer, token: $ARMORIQ_SLACK_VALIDATION_TOKEN}
+  - id: gmail
+    url: https://gmailmcp.googleapis.com/mcp/v1
+    auth: {type: bearer, token: $ARMORIQ_GMAIL_VALIDATION_TOKEN}
+  - id: zendesk
+    url: $ARMORIQ_ZENDESK_MCP_URL
+    auth: {type: bearer, token: $ARMORIQ_MCP_BEARER_TOKEN}
+  - id: notion
+    url: https://mcp.notion.com/mcp
+    auth: {type: bearer, token: $ARMORIQ_NOTION_VALIDATION_TOKEN}
+  - id: web_search
+    url: https://rival-search-mcp.fly.dev/mcp
 policy:
   allow:
     - openhuman-support.draft_support_response
     - openhuman-support.prepare_refund_request
+    - slack.*
+    - gmail.*
+    - zendesk.*
+    - notion.*
+    - web_search.*
   deny: []
 intent:
   ttl_seconds: 360
