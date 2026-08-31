@@ -3,14 +3,14 @@ version: v1
 identity:
   api_key: $ARMORIQ_API_KEY
   user_id: openhuman-service
-  agent_id: openhuman-hr
+  agent_id: openhuman-alison
 environment: production
 proxy:
   url: https://proxy.armoriq.ai
   timeout: 30
   max_retries: 3
 mcp_servers:
-  - id: openhuman-hr
+  - id: openhuman-alison-hr
     url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp/hr
     description: OpenHuman HR coworker tools with approval boundaries
     auth:
@@ -18,8 +18,8 @@ mcp_servers:
       token: $ARMORIQ_MCP_BEARER_TOKEN
 policy:
   allow:
-    - openhuman-hr.answer_hr_question
-    - openhuman-hr.prepare_pto_request
+    - openhuman-alison-hr.answer_hr_question
+    - openhuman-alison-hr.prepare_pto_request
   deny: []
 intent:
   ttl_seconds: 360

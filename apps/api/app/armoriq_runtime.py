@@ -25,18 +25,18 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-MCP_SLUG = "openhuman-general"
+MCP_SLUG = "openhuman-jordan-general"
 MCP_ACTION = "generate_response"
-HR_MCP_SLUG = "openhuman-hr"
+HR_MCP_SLUG = "openhuman-alison-hr"
 HR_RESPONSE_ACTION = "answer_hr_question"
 HR_APPROVAL_ACTION = "prepare_pto_request"
-SALES_MCP_SLUG = "openhuman-sales"
+SALES_MCP_SLUG = "openhuman-marcus-sales"
 SALES_RESPONSE_ACTION = "draft_sales_response"
 SALES_APPROVAL_ACTION = "prepare_discount_request"
-SUPPORT_MCP_SLUG = "openhuman-support"
+SUPPORT_MCP_SLUG = "openhuman-alex-support"
 SUPPORT_RESPONSE_ACTION = "draft_support_response"
 SUPPORT_APPROVAL_ACTION = "prepare_refund_request"
-LEGAL_MCP_SLUG = "openhuman-legal"
+LEGAL_MCP_SLUG = "openhuman-taylor-legal"
 LEGAL_RESPONSE_ACTION = "review_legal_question"
 LEGAL_APPROVAL_ACTION = "prepare_legal_document_share"
 
@@ -51,11 +51,11 @@ ROLE_RESPONSE_ACTIONS = {
     "legal_compliance": (LEGAL_MCP_SLUG, LEGAL_RESPONSE_ACTION),
 }
 SERVER_AGENT_IDS = {
-    MCP_SLUG: "openhuman",
-    HR_MCP_SLUG: "openhuman-hr",
-    SALES_MCP_SLUG: "openhuman-sales",
-    SUPPORT_MCP_SLUG: "openhuman-support",
-    LEGAL_MCP_SLUG: "openhuman-legal",
+    MCP_SLUG: "openhuman-jordan",
+    HR_MCP_SLUG: "openhuman-alison",
+    SALES_MCP_SLUG: "openhuman-marcus",
+    SUPPORT_MCP_SLUG: "openhuman-alex",
+    LEGAL_MCP_SLUG: "openhuman-taylor",
 }
 SERVER_SAFE_ACTIONS = {
     MCP_SLUG: MCP_ACTION,

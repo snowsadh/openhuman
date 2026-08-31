@@ -3,14 +3,14 @@ version: v1
 identity:
   api_key: $ARMORIQ_API_KEY
   user_id: openhuman-service
-  agent_id: openhuman
+  agent_id: openhuman-jordan
 environment: production
 proxy:
   url: https://proxy.armoriq.ai
   timeout: 30
   max_retries: 3
 mcp_servers:
-  - id: openhuman-general
+  - id: openhuman-jordan-general
     url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp
     description: OpenHuman governed general response generation
     auth:
@@ -18,7 +18,7 @@ mcp_servers:
       token: $ARMORIQ_MCP_BEARER_TOKEN
 policy:
   allow:
-    - openhuman-general.generate_response
+    - openhuman-jordan-general.generate_response
   deny: []
 intent:
   ttl_seconds: 360

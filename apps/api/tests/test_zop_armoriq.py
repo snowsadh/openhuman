@@ -137,7 +137,7 @@ class ZopArmorIQTests(IsolatedAsyncioTestCase):
         self.assertEqual(plan_hash, "signed-plan")
         self.assertEqual(mcp_slug, zop_armoriq.HR_MCP_SLUG)
         self.assertEqual(action, zop_armoriq.HR_RESPONSE_ACTION)
-        client_factory.assert_called_once_with(agent_id="openhuman-hr")
+        client_factory.assert_called_once_with(agent_id="openhuman-alison")
         session.start_plan.assert_called_once()
         session.check.assert_called_once()
         session.dispatch.assert_called_once()

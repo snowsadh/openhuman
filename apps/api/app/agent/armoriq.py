@@ -13,19 +13,19 @@ from app.core.config import settings
 _token_lock = threading.Lock()
 
 _ROLE_AGENT_IDS = {
-    "hr": "openhuman-hr",
-    "sales": "openhuman-sales",
-    "support": "openhuman-support",
-    "legal-compliance": "openhuman-legal",
-    "legal_compliance": "openhuman-legal",
-    "legal": "openhuman-legal",
+    "hr": "openhuman-alison",
+    "sales": "openhuman-marcus",
+    "support": "openhuman-alex",
+    "legal-compliance": "openhuman-taylor",
+    "legal_compliance": "openhuman-taylor",
+    "legal": "openhuman-taylor",
 }
 
 
 def agent_id_for_employee_kind(employee_kind: str | None) -> str:
     """Return the stable ArmorIQ agent identity for an employee role."""
     normalized = (employee_kind or "").strip().lower().replace(" ", "_")
-    return _ROLE_AGENT_IDS.get(normalized, "openhuman")
+    return _ROLE_AGENT_IDS.get(normalized, "openhuman-jordan")
 
 
 def parse_mcp_tool_name(tool_name: str) -> tuple[str, str] | None:
@@ -37,7 +37,7 @@ def parse_mcp_tool_name(tool_name: str) -> tuple[str, str] | None:
 
 
 @lru_cache(maxsize=8)
-def get_armoriq_client(agent_id: str = "openhuman") -> ArmorIQClient:
+def get_armoriq_client(agent_id: str = "openhuman-jordan") -> ArmorIQClient:
     """Create the SDK client lazily so non-MCP runs need no ArmorIQ key."""
     return ArmorIQClient(
         api_key=settings.armoriq_api_key,

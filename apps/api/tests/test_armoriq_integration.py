@@ -59,7 +59,7 @@ async def _run_inline(function, *args):  # type: ignore[no-untyped-def]
 def test_request_client_contains_only_selected_mcp_credential() -> None:
     with patch("app.agent.armoriq.ArmorIQClient") as constructor:
         get_request_armoriq_client(
-            agent_id="openhuman-sales",
+            agent_id="openhuman-marcus",
             mcp="hubspot",
             credentials="oauth-token",
             auth_type="oauth2",
@@ -67,7 +67,7 @@ def test_request_client_contains_only_selected_mcp_credential() -> None:
 
     constructor.assert_called_once()
     kwargs = constructor.call_args.kwargs
-    assert kwargs["agent_id"] == "openhuman-sales"
+    assert kwargs["agent_id"] == "openhuman-marcus"
     assert kwargs["mcp_credentials"] == {
         "hubspot": {"authType": "bearer", "token": "oauth-token"}
     }

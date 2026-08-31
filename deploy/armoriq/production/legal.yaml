@@ -3,14 +3,14 @@ version: v1
 identity:
   api_key: $ARMORIQ_API_KEY
   user_id: openhuman-service
-  agent_id: openhuman-legal
+  agent_id: openhuman-taylor
 environment: production
 proxy:
   url: https://proxy.armoriq.ai
   timeout: 30
   max_retries: 3
 mcp_servers:
-  - id: openhuman-legal
+  - id: openhuman-taylor-legal
     url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp/legal
     description: OpenHuman legal and compliance tools with approval boundaries
     auth:
@@ -18,8 +18,8 @@ mcp_servers:
       token: $ARMORIQ_MCP_BEARER_TOKEN
 policy:
   allow:
-    - openhuman-legal.review_legal_question
-    - openhuman-legal.prepare_legal_document_share
+    - openhuman-taylor-legal.review_legal_question
+    - openhuman-taylor-legal.prepare_legal_document_share
   deny: []
 intent:
   ttl_seconds: 360

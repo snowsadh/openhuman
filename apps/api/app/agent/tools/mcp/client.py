@@ -543,7 +543,7 @@ class MCPClientManager:
             start = time.monotonic()
             try:
                 invocation_client = get_request_armoriq_client(
-                    agent_id=str(configurable.get("armoriq_agent_id") or "openhuman"),
+                    agent_id=str(configurable.get("armoriq_agent_id") or "openhuman-jordan"),
                     mcp=slug,
                     credentials=connection.credentials if connection else None,
                     auth_type=(

@@ -3,14 +3,14 @@ version: v1
 identity:
   api_key: $ARMORIQ_API_KEY
   user_id: openhuman-service
-  agent_id: openhuman-support
+  agent_id: openhuman-alex
 environment: production
 proxy:
   url: https://proxy.armoriq.ai
   timeout: 30
   max_retries: 3
 mcp_servers:
-  - id: openhuman-support
+  - id: openhuman-alex-support
     url: https://d2pkjr3bs2hemz.cloudfront.net/api/agent/armoriq/mcp/support
     description: OpenHuman customer-support tools with refund guardrails
     auth:
@@ -18,8 +18,8 @@ mcp_servers:
       token: $ARMORIQ_MCP_BEARER_TOKEN
 policy:
   allow:
-    - openhuman-support.draft_support_response
-    - openhuman-support.prepare_refund_request
+    - openhuman-alex-support.draft_support_response
+    - openhuman-alex-support.prepare_refund_request
   deny: []
 intent:
   ttl_seconds: 360

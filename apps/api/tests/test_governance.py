@@ -42,9 +42,9 @@ def test_production_policy_is_deny_by_default_with_all_three_decisions() -> None
     assert policy["defaults"]["decision"] == "deny"
     assert effects == {"permit", "require_approval", "forbid"}
     assert principals == {
-        "openhuman",
-        "openhuman-hr",
-        "openhuman-sales",
-        "openhuman-support",
-        "openhuman-legal",
+            "openhuman-jordan",
+        "openhuman-alison",
+        "openhuman-marcus",
+        "openhuman-alex",
+        "openhuman-taylor",
     }
