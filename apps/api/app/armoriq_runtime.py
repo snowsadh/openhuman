@@ -64,6 +64,12 @@ SERVER_SAFE_ACTIONS = {
     SUPPORT_MCP_SLUG: SUPPORT_RESPONSE_ACTION,
     LEGAL_MCP_SLUG: LEGAL_RESPONSE_ACTION,
 }
+ROLE_SERVER_KINDS = {
+    "hr": HR_MCP_SLUG,
+    "sales": SALES_MCP_SLUG,
+    "support": SUPPORT_MCP_SLUG,
+    "legal": LEGAL_MCP_SLUG,
+}
 
 router = APIRouter(prefix="/api/agent/armoriq", tags=["agent"])
 
@@ -386,7 +392,7 @@ async def armoriq_status() -> dict[str, Any]:
     await ensure_armoriq_runtime_ready()
     return {
         "status": "ready",
-        "agent": "openhuman",
+        "agent": "openhuman-jordan",
         "default_action": "block",
         "servers": [
             {
@@ -489,8 +495,8 @@ async def role_mcp_endpoint(
     authorization: str | None = Header(default=None),
 ) -> StreamingResponse:
     """Serve one role-specific MCP inventory through the ArmorIQ proxy."""
-    server_slug = f"openhuman-{server_kind}"
-    if server_slug not in MCP_SERVER_DEFINITIONS:
+    server_slug = ROLE_SERVER_KINDS.get(server_kind)
+    if server_slug is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown MCP server")
     if not _authorized(authorization):
         raise HTTPException(

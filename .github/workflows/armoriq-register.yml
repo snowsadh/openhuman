@@ -75,6 +75,14 @@ jobs:
             printf 'ArmorIQ registration failed for: %s\n' "${failures[*]}"
             exit 1
           fi
+      - name: Restore ArmorIQ policy credentials
+        env:
+          ARMORIQ_CLI_CREDENTIALS_B64: ${{ secrets.ARMORIQ_CLI_CREDENTIALS_B64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.armoriq"
+          printf '%s' "$ARMORIQ_CLI_CREDENTIALS_B64" | base64 --decode > "$HOME/.armoriq/credentials.json"
+          chmod 600 "$HOME/.armoriq/credentials.json"
       - name: Activate reviewed deny-by-default policy profile
         run: >-
           armoriq policy propose
