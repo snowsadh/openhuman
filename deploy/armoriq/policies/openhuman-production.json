@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "armor.policy.v1",
+  "kind": "PolicyProfile",
+  "metadata": {
+    "name": "openhuman-production",
+    "description": "Deny-by-default role policy for OpenHuman AI coworkers"
+  },
+  "defaults": {
+    "decision": "deny",
+    "conflictResolution": "deny_overrides"
+  },
+  "statements": [
+    {
+      "id": "hr-read",
+      "effect": "permit",
+      "principal": { "type": "agent", "id": "openhuman-hr" },
+      "action": { "type": "tool", "in": ["answer_hr_question", "search_policies", "list_events", "get_leave_balance", "search_pages"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "hr-approval",
+      "effect": "require_approval",
+      "principal": { "type": "agent", "id": "openhuman-hr" },
+      "action": { "type": "tool", "in": ["prepare_pto_request", "create_event", "update_page", "create_draft", "send_email"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "hr-block",
+      "effect": "forbid",
+      "principal": { "type": "agent", "id": "openhuman-hr" },
+      "action": { "type": "tool", "in": ["change_payroll", "delete_employee", "get_secret", "delete_event"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "sales-read",
+      "effect": "permit",
+      "principal": { "type": "agent", "id": "openhuman-sales" },
+      "action": { "type": "tool", "in": ["draft_sales_response", "search_contacts", "get_contact", "list_deals", "search", "list_events"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "sales-approval",
+      "effect": "require_approval",
+      "principal": { "type": "agent", "id": "openhuman-sales" },
+      "action": { "type": "tool", "in": ["prepare_discount_request", "update_contact", "update_deal", "create_event", "create_draft", "send_email", "share_design"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "sales-block",
+      "effect": "forbid",
+      "principal": { "type": "agent", "id": "openhuman-sales" },
+      "action": { "type": "tool", "in": ["delete_deal", "export_all", "merge_deal", "delete_contact"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "support-read",
+      "effect": "permit",
+      "principal": { "type": "agent", "id": "openhuman-support" },
+      "action": { "type": "tool", "in": ["draft_support_response", "get_ticket", "search_tickets", "search_pages", "get_user"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "support-approval",
+      "effect": "require_approval",
+      "principal": { "type": "agent", "id": "openhuman-support" },
+      "action": { "type": "tool", "in": ["prepare_refund_request", "reply_ticket", "close_ticket", "escalate_ticket", "issue_refund"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "support-block",
+      "effect": "forbid",
+      "principal": { "type": "agent", "id": "openhuman-support" },
+      "action": { "type": "tool", "in": ["delete_user", "change_credentials", "unrestricted_refund"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "general-read",
+      "effect": "permit",
+      "principal": { "type": "agent", "id": "openhuman" },
+      "action": { "type": "tool", "in": ["generate_response", "search", "search_code", "get_file", "list_workflows", "search_pages", "list_events", "create_design"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "general-approval",
+      "effect": "require_approval",
+      "principal": { "type": "agent", "id": "openhuman" },
+      "action": { "type": "tool", "in": ["send_message", "trigger_workflow", "create_issue", "create_comment", "create_pull_request", "publish", "share_design"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "general-block",
+      "effect": "forbid",
+      "principal": { "type": "agent", "id": "openhuman" },
+      "action": { "type": "tool", "in": ["get_secret", "delete_repository", "merge_pull_request", "change_environment", "delete_workflow"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "legal-read",
+      "effect": "permit",
+      "principal": { "type": "agent", "id": "openhuman-legal" },
+      "action": { "type": "tool", "in": ["review_legal_question", "search_pages", "get_page", "search", "get_file"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "legal-approval",
+      "effect": "require_approval",
+      "principal": { "type": "agent", "id": "openhuman-legal" },
+      "action": { "type": "tool", "in": ["prepare_legal_document_share", "create_draft", "send_email", "update_page", "share_document"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    },
+    {
+      "id": "legal-block",
+      "effect": "forbid",
+      "principal": { "type": "agent", "id": "openhuman-legal" },
+      "action": { "type": "tool", "in": ["delete_contract", "final_legal_approval", "delete_page", "delete_document"] },
+      "resource": { "type": "network", "scope": "registered-mcp" },
+      "conditions": []
+    }
+  ]
+}

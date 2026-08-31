@@ -40,3 +40,10 @@ jobs:
             armoriq validate --config "$config"
             armoriq register --config "$config"
           done
+      - name: Activate reviewed deny-by-default policy profile
+        run: >-
+          armoriq policy propose
+          --file deploy/armoriq/policies/openhuman-production.json
+          --reason "Version-controlled OpenHuman production policy"
+          --activate
+          --yes

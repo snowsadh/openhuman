@@ -19,8 +19,8 @@ mcp_servers:
 policy:
   allow:
     - openhuman-legal.review_legal_question
-  deny:
     - openhuman-legal.prepare_legal_document_share
+  deny: []
 intent:
   ttl_seconds: 360
   require_csrg: true

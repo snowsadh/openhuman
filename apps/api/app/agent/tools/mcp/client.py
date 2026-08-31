@@ -34,6 +34,10 @@ from app.agent.armoriq import get_request_armoriq_client, parse_mcp_tool_name
 from app.agent.tools.mcp.connectors.registry import REGISTRY, ConnectorSpec
 from app.agent.tools.mcp.security import validate_connection
 from app.core.config import settings
+from app.governance.service import (
+    persist_hold_from_context,
+    update_approval_execution_from_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -376,7 +380,7 @@ class MCPClientManager:
                     self._client.get_tools(server_name=slug),
                     timeout=timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(
                     "Timeout loading tools from MCP server '%s' (%.1f s)",
                     slug,
@@ -493,10 +497,21 @@ class MCPClientManager:
             event_loop = asyncio.get_running_loop()
 
             def on_hold(info: Any) -> None:
-                holds.append(info.model_dump(mode="json"))
+                hold_data = info.model_dump(mode="json")
+                holds.append(hold_data)
                 if len(holds) == 1:
-                    asyncio.run_coroutine_threadsafe(
-                        record_activity_from_context(
+                    async def persist_hold() -> None:
+                        await persist_hold_from_context(
+                            plan_hash=token.plan_hash,
+                            token_id=token.token_id,
+                            mcp=slug,
+                            action=action,
+                            parameters=input,
+                            requester_email=configurable.get("armoriq_user_email"),
+                            hold=hold_data,
+                            job_id=configurable.get("job_id"),
+                        )
+                        await record_activity_from_context(
                             "armoriq_held",
                             f"ArmorIQ held {slug}.{action} for approval",
                             status="pending",
@@ -504,10 +519,18 @@ class MCPClientManager:
                                 "mcp": slug,
                                 "action": action,
                                 "plan_hash": token.plan_hash,
+                                "delegation_id": hold_data.get("delegation_id"),
                             },
-                        ),
+                        )
+
+                    future = asyncio.run_coroutine_threadsafe(
+                        persist_hold(),
                         event_loop,
                     )
+                    # The callback runs in the SDK worker thread. Waiting here
+                    # guarantees the pending record exists before an approval
+                    # can race through and mark the exact action executed.
+                    future.result(timeout=settings.armoriq_request_timeout_seconds)
 
             options = InvokeOptions(
                 wait_for_approval=True,
@@ -566,6 +589,35 @@ class MCPClientManager:
                         "plan_hash": token.plan_hash,
                     },
                 )
+                if holds:
+                    await record_activity_from_context(
+                        "armoriq_approved",
+                        f"ArmorIQ approved {slug}.{action}",
+                        status="approved",
+                        metadata={
+                            "mcp": slug,
+                            "action": action,
+                            "plan_hash": token.plan_hash,
+                            "delegation_id": holds[0].get("delegation_id"),
+                        },
+                    )
+                await update_approval_execution_from_context(
+                    plan_hash=token.plan_hash,
+                    mcp=slug,
+                    action=action,
+                    status="executed",
+                    result=result.result,
+                )
+                await record_activity_from_context(
+                    "armoriq_executed",
+                    f"Executed {slug}.{action} through ArmorIQ",
+                    status="succeeded",
+                    metadata={
+                        "mcp": slug,
+                        "action": action,
+                        "plan_hash": token.plan_hash,
+                    },
+                )
                 return result.result
             except (PolicyBlockedException, PolicyHoldException) as exc:
                 elapsed_ms = (time.monotonic() - start) * 1000
@@ -594,6 +646,22 @@ class MCPClientManager:
                 elapsed_ms = (time.monotonic() - start) * 1000
                 log_mcp_call(slug, tool.name, elapsed_ms, success=False, error=str(exc))
                 cb.record_failure()
+                await update_approval_execution_from_context(
+                    plan_hash=token.plan_hash,
+                    mcp=slug,
+                    action=action,
+                    status="failed",
+                )
+                await record_activity_from_context(
+                    "armoriq_failed",
+                    f"ArmorIQ execution failed for {slug}.{action}",
+                    status="failed",
+                    metadata={
+                        "mcp": slug,
+                        "action": action,
+                        "plan_hash": token.plan_hash,
+                    },
+                )
                 raise
             except ArmorIQException as exc:
                 elapsed_ms = (time.monotonic() - start) * 1000
@@ -620,11 +688,22 @@ class MCPClientManager:
                     error="ArmorIQ approval/invocation timeout",
                 )
                 await record_activity_from_context(
-                    "armoriq_blocked",
+                    "armoriq_expired" if holds else "armoriq_blocked",
                     f"ArmorIQ timed out {slug}.{action}",
-                    status="blocked",
-                    metadata={"mcp": slug, "action": action},
+                    status="expired" if holds else "blocked",
+                    metadata={
+                        "mcp": slug,
+                        "action": action,
+                        "plan_hash": token.plan_hash,
+                    },
                 )
+                if holds:
+                    await update_approval_execution_from_context(
+                        plan_hash=token.plan_hash,
+                        mcp=slug,
+                        action=action,
+                        status="expired",
+                    )
                 raise
             except Exception as exc:
                 elapsed_ms = (time.monotonic() - start) * 1000

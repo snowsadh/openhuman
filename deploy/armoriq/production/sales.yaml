@@ -19,8 +19,8 @@ mcp_servers:
 policy:
   allow:
     - openhuman-sales.draft_sales_response
-  deny:
     - openhuman-sales.prepare_discount_request
+  deny: []
 intent:
   ttl_seconds: 360
   require_csrg: true

@@ -23,6 +23,7 @@ import app.employees.models  # noqa: F401
 import app.organizations.models  # noqa: F401
 import app.agent.tools.mcp.models  # noqa: F401
 import app.schedules.models  # noqa: F401
+import app.governance.models  # noqa: F401
 from app.activity.router import router as activity_router
 from app.agent.checkpointer import close_checkpointer, init_checkpointer
 from app.agent.jobs.worker import AgentJobWorker, set_active_worker
@@ -36,6 +37,11 @@ from app.employees.router import router as emp_router
 from app.gateway.manager import BotGatewayManager
 from app.gateway.slack_oauth import router as slack_oauth_router
 from app.gateway.fixed_bots_router import router as fixed_bots_router
+from app.governance.router import (
+    approval_router,
+    assignment_router,
+    metrics_router,
+)
 from app.health.router import router as health_router
 from app.mcp.router import oauth_router as mcp_oauth_router
 from app.mcp.router import router as mcp_router
@@ -170,6 +176,9 @@ app.include_router(ca_router)
 app.include_router(doc_router)
 app.include_router(agent_router)
 app.include_router(armoriq_router)
+app.include_router(approval_router)
+app.include_router(assignment_router)
+app.include_router(metrics_router)
 app.include_router(memory_router)
 app.include_router(slack_oauth_router)
 app.include_router(fixed_bots_router)

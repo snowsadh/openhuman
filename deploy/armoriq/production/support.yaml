@@ -19,8 +19,8 @@ mcp_servers:
 policy:
   allow:
     - openhuman-support.draft_support_response
-  deny:
     - openhuman-support.prepare_refund_request
+  deny: []
 intent:
   ttl_seconds: 360
   require_csrg: true

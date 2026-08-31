@@ -14,6 +14,7 @@ import {
   Moon,
   Puzzle,
   Settings,
+  ShieldCheck,
   Sun,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { label: "Activity", href: "/activity", icon: Activity },
   { label: "Storage", href: "/storage", icon: HardDrive },
   { label: "MCP Marketplace", href: "/mcp-marketplace", icon: Puzzle },
+  { label: "ArmorIQ", href: "/armoriq", icon: ShieldCheck },
   { label: "Organization", href: "/organization", icon: Building2 },
   { label: "Documentation", href: "/docs", icon: BookOpen },
   { label: "Settings", href: "/settings", icon: Settings },

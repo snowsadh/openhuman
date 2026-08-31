@@ -19,8 +19,8 @@ mcp_servers:
 policy:
   allow:
     - openhuman-hr.answer_hr_question
-  deny:
     - openhuman-hr.prepare_pto_request
+  deny: []
 intent:
   ttl_seconds: 360
   require_csrg: true

@@ -21,6 +21,11 @@ The role URLs use the AWS CloudFront domain:
 - `ARMORIQ_SUPPORT_MCP_URL=https://<distribution>/api/agent/armoriq/mcp/support`
 - `ARMORIQ_LEGAL_MCP_URL=https://<distribution>/api/agent/armoriq/mcp/legal`
 
-Approval tools remain denied in these baseline manifests until the governance
-checkpoint installs explicit ArmorIQ hold policies. This preserves fail-closed
-behavior during staged deployment.
+Approval tools are registered in each role manifest and the organization policy
+turns those tools into `require_approval` decisions. Unlisted tools remain
+denied by default.
+
+`policies/openhuman-production.json` is the organization policy profile. It is
+deny-by-default and includes role-scoped permit, require-approval, and forbid
+statements. CI activates it only after all five MCP manifests validate and
+register successfully.

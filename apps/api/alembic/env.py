@@ -24,6 +24,7 @@ import app.organizations.models  # noqa: F401, E402
 import app.activity.models  # noqa: F401, E402
 import app.agent.tools.mcp.models  # noqa: F401, E402
 import app.agent.jobs.models  # noqa: F401, E402
+import app.governance.models  # noqa: F401, E402
 
 # this is the Alembic Config object
 config = context.config
@@ -93,4 +94,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

@@ -43,6 +43,11 @@ _ALLOWED_EVENT_TYPES = frozenset({
     "armoriq_allowed",
     "armoriq_held",
     "armoriq_blocked",
+    "armoriq_approved",
+    "armoriq_rejected",
+    "armoriq_executed",
+    "armoriq_failed",
+    "armoriq_expired",
 })
 
 

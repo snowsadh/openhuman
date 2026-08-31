@@ -117,6 +117,7 @@ class Settings(BaseSettings):
     armoriq_proxy_url: str = "https://proxy.armoriq.ai"
     armoriq_mcp_public_url: str = ""
     armoriq_mcp_bearer_token: str = ""
+    armoriq_dashboard_url: str = "https://platform.armoriq.ai"
 
     # Document storage
     upload_dir: str = "./uploads"

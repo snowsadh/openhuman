@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from armoriq_sdk.exceptions import PolicyBlockedException, PolicyHoldException
-from armoriq_sdk.models import IntentToken
+from armoriq_sdk.models import HoldInfo, IntentToken
 from langchain_core.tools import StructuredTool
 
 from app.agent.armoriq import get_request_armoriq_client
@@ -104,6 +104,65 @@ async def test_allowed_call_executes_once_through_armoriq() -> None:
     assert result == "ArmorIQ executed it"
     assert client.invoke_with_policy.call_count == 1
     assert original_calls == []
+
+
+@pytest.mark.asyncio
+async def test_hold_is_persisted_before_approved_action_executes() -> None:
+    tool = MCPClientManager()._wrap_tool(_tool([]), "identity-test", None)
+    client = Mock()
+
+    def invoke_with_hold(_mcp, _action, _token_value, _params, options):
+        options.on_hold(
+            HoldInfo(
+                delegation_id="delegation-42",
+                reason="Human approval required",
+                tool="assign_group",
+                mcp="identity-test",
+            )
+        )
+        return SimpleNamespace(result={"status": "assigned"})
+
+    client.invoke_with_policy.side_effect = invoke_with_hold
+    persist = AsyncMock()
+    update = AsyncMock()
+
+    with (
+        patch(
+            "app.agent.tools.mcp.client.get_request_armoriq_client",
+            return_value=client,
+        ),
+        patch(
+            "app.agent.tools.mcp.client.persist_hold_from_context",
+            new=persist,
+        ),
+        patch(
+            "app.agent.tools.mcp.client.update_approval_execution_from_context",
+            new=update,
+        ),
+        patch(
+            "app.agent.tools.mcp.client.record_activity_from_context",
+            new=AsyncMock(),
+        ),
+    ):
+        result = await tool.ainvoke(
+            {"user": "sam", "group": "engineering"},
+            config={
+                "configurable": {
+                    "armoriq_intent_token": _token().model_dump(mode="json"),
+                    "armoriq_user_email": "admin@example.com",
+                }
+            },
+        )
+
+    assert result == {"status": "assigned"}
+    persist.assert_awaited_once()
+    update.assert_awaited_once_with(
+        plan_hash="test-plan-hash",
+        mcp="identity-test",
+        action="assign_group",
+        status="executed",
+        result={"status": "assigned"},
+    )
 
 
 @pytest.mark.asyncio

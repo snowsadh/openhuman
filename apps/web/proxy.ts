@@ -2,8 +2,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/dashboard", "/onboard", "/setup", "/organization", "/activity", "/storage", "/settings"];
-
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
