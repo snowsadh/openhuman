@@ -47,10 +47,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          failures=()
           for config in deploy/armoriq/production/*.yaml; do
             armoriq validate --config "$config"
-            armoriq register --config "$config"
+
+            registered=false
+            for attempt in 1 2 3 4; do
+              if armoriq register --config "$config"; then
+                registered=true
+                break
+              fi
+
+              if [ "$attempt" -lt 4 ]; then
+                delay=$((5 * (2 ** (attempt - 1))))
+                echo "ArmorIQ registration attempt $attempt failed for $config; retrying in ${delay}s"
+                sleep "$delay"
+              fi
+            done
+
+            if [ "$registered" != true ]; then
+              failures+=("$config")
+              echo "::error file=$config::ArmorIQ registration failed after 4 attempts"
+            fi
           done
+
+          if [ "${#failures[@]}" -gt 0 ]; then
+            printf 'ArmorIQ registration failed for: %s\n' "${failures[*]}"
+            exit 1
+          fi
       - name: Activate reviewed deny-by-default policy profile
         run: >-
           armoriq policy propose
